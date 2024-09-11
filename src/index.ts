@@ -3,9 +3,11 @@ import * as dotenv from "dotenv";
 import express from "express";
 import { Admin } from "./entities/Admin";
 import { Business } from "./entities/Business";
-import { Customer } from "./entities/Customer";
+import { Customer_account } from "./entities/Customer_account";
 import { createBusinessRouter } from "./routes/create_business";
-import { createCustomerRouter } from "./routes/create_customer";
+import { createCustomerAccountRouter } from "./routes/create_customer_account";
+import { createCustomerProfileRouter } from "./routes/create_customer_profile";
+import { Customer_profile } from "./entities/Customer_profile";
 
 dotenv.config();
 
@@ -16,7 +18,7 @@ export const AppDataSource = new DataSource({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD, 
     database: process.env.DB_DATABASE,
-    entities: [Admin, Business, Customer],
+    entities: [Admin, Business, Customer_account, Customer_profile],
     synchronize: true
 });
 
@@ -49,7 +51,9 @@ const main = async () => {
         console.log("Connected to Postgres");
         app.use(express.json());
         app.use(createBusinessRouter);
-        app.use(createCustomerRouter);
+        app.use(createCustomerAccountRouter);
+        app.use(createCustomerProfileRouter);
+
 
         app.listen(8080, () => {
             console.log("Now running on port 8080");
