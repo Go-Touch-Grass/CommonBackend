@@ -1,11 +1,12 @@
-import { DataSource } from "typeorm";
 import * as dotenv from "dotenv";
+import { DataSource } from "typeorm";
 import express from "express";
+import cors from "cors";
 import { Admin } from "./entities/Admin";
 import { Business } from "./entities/Business";
 import { Customer } from "./entities/Customer";
-import { createBusinessRouter } from "./routes/create_business";
-import { createCustomerRouter } from "./routes/create_customer";
+import { businessRouter } from "./routes/business";
+import { customerRouter } from "./routes/customer";
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ export const AppDataSource = new DataSource({
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT),
     username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD, 
+    password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
     entities: [Admin, Business, Customer],
     synchronize: true
@@ -48,8 +49,10 @@ const main = async () => {
 
         console.log("Connected to Postgres");
         app.use(express.json());
-        app.use(createBusinessRouter);
-        app.use(createCustomerRouter);
+        app.use(cors());
+
+        app.use(businessRouter);
+        app.use(customerRouter);
 
         app.listen(8080, () => {
             console.log("Now running on port 8080");
