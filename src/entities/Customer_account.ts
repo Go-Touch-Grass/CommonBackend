@@ -24,7 +24,7 @@ export class Customer_account extends BaseEntity {
     @JoinColumn({
         name:'customer_id'
     })
-    customer_profile: Customer_profile
+    customer_profile: Customer_profile 
 
     @CreateDateColumn()
     created_at: Date;

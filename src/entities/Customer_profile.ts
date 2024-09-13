@@ -8,13 +8,11 @@ import { Customer_account } from "./Customer_account";
      id: number;
 
      @Column({
-         unique: true
+        unique: true
      })
      avatarname: string;
 
-     @Column({
-        nullable:true
-     })
+     @Column()
      profilepicture: string;
     
      @OneToOne(
