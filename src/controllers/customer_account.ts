@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Customer } from '../entities/Customer';
+import { Customer_account } from '../entities/Customer_account';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
@@ -7,11 +7,10 @@ export const registerCustomer = async (req: Request, res: Response): Promise<voi
     try {
         const {
             username,
-            password,
-            name
+            password
         } = req.body;
 
-        const isUsernameAlreadyInUse = await Customer.findOneBy({ username });
+        const isUsernameAlreadyInUse = await Customer_account.findOneBy({ username });
 
         if (isUsernameAlreadyInUse) {
             res.status(400).json({
@@ -22,22 +21,22 @@ export const registerCustomer = async (req: Request, res: Response): Promise<voi
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const customer = Customer.create({
+        const customer_account = Customer_account.create({
             username,
             password: hashedPassword,
-            name
+
         });
 
-        await customer.save();
+        await customer_account.save();
 
         const token = jwt.sign(
-            { id: customer.customer_id, username: customer.username }, 
+            { id: customer_account.id, username: customer_account.username }, 
             process.env.JWT_SECRET as string,
             { expiresIn: '1h' }
         );
 
         res.json({
-            customer,
+            customer_account,
             token
         });
 

@@ -4,7 +4,7 @@ import express from "express";
 import { Admin } from "./entities/Admin";
 import { Business } from "./entities/Business";
 import { Customer_account } from "./entities/Customer_account";
-import { createBusinessRouter } from "./routes/create_business";
+import { businessRouter } from "./routes/business";
 import { createCustomerAccountRouter } from "./routes/create_customer_account";
 import { createCustomerProfileRouter } from "./routes/create_customer_profile";
 import { Customer_profile } from "./entities/Customer_profile";
@@ -50,7 +50,7 @@ const main = async () => {
 
         console.log("Connected to Postgres");
         app.use(express.json());
-        app.use(createBusinessRouter);
+        app.use(businessRouter);
         app.use(createCustomerAccountRouter);
         app.use(createCustomerProfileRouter);
 
