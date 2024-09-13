@@ -2,7 +2,7 @@ import { DataSource } from "typeorm";
 import * as dotenv from "dotenv";
 import express from "express";
 import { Admin } from "./entities/Admin";
-import { Business } from "./entities/Business";
+import { Business } from "./entities/business";
 import { Customer_account } from "./entities/Customer_account";
 import { businessRouter } from "./routes/business";
 import { createCustomerAccountRouter } from "./routes/create_customer_account";
