@@ -1,7 +1,7 @@
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity()
-export class Business extends BaseEntity {
+@Entity('business_account')
+export class Business_account extends BaseEntity {
     @PrimaryGeneratedColumn()
     business_id: number;
 
@@ -14,5 +14,5 @@ export class Business extends BaseEntity {
     password: string;
 
     @Column()
-    name: string;
+    email: string;
 }

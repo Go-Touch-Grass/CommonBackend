@@ -1,8 +1,10 @@
+/*
 import { Request, Response } from 'express';
-import { Business } from '../entities/business';
+import { Business } from '../entities/Business_account';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
+// For registering their business after the creation of account 
 export const registerBusiness = async (req: Request, res: Response): Promise<void> => {
     try {
         const {
@@ -31,7 +33,7 @@ export const registerBusiness = async (req: Request, res: Response): Promise<voi
         await business.save();
 
         const token = jwt.sign(
-            { id: business.business_id, username: business.username }, 
+            { id: business.business_id, username: business.username },
             process.env.JWT_SECRET as string,
             { expiresIn: '1h' }
         );
@@ -51,3 +53,5 @@ export const registerBusiness = async (req: Request, res: Response): Promise<voi
         });
     }
 };
+
+*/
