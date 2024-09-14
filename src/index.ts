@@ -11,6 +11,7 @@ import { customerProfileRouter } from "./routes/customer_profile";
 import { Business_register_business } from "./entities/Business_register_business";
 import { businessLoginAccountRouter } from "./routes/business_login_account";
 import { businessLogoutAccountRouter } from "./routes/business_logout_account";
+import { Outlet } from "./entities/Outlet";
 
 dotenv.config();
 
@@ -21,7 +22,7 @@ export const AppDataSource = new DataSource({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    entities: [Admin, Business_account, Business_register_business, Customer_account, Customer_profile],
+    entities: [Admin, Business_account, Business_register_business, Customer_account, Customer_profile,Outlet],
     synchronize: true
 });
 
