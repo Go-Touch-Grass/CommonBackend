@@ -22,8 +22,15 @@ export const AppDataSource = new DataSource({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    entities: [Admin, Business_account, Business_register_business, Customer_account, Customer_profile,Outlet],
-    synchronize: true
+    entities: [
+        Admin,
+        Business_account,
+        Business_register_business,
+        Customer_account,
+        Customer_profile,
+        Outlet,
+    ],
+    synchronize: true,
 });
 
 const app = express();
@@ -36,27 +43,32 @@ const main = async () => {
                 const adminRepository = AppDataSource.getRepository(Admin);
 
                 // Check if admin user already exists
-                const existingAdmin = await adminRepository.findOneBy({ username: 'admin' });
+                const existingAdmin = await adminRepository.findOneBy({
+                    username: "admin",
+                });
 
                 if (!existingAdmin) {
                     const admin = adminRepository.create({
-                        username: 'admin',
-                        password: 'password',
-                        name: 'admin',
+                        username: "admin",
+                        password: "password",
+                        name: "admin",
                     });
 
                     await adminRepository.save(admin);
-                    console.log('Admin user created');
+                    console.log("Admin user created");
                 } else {
-                    console.log('Admin user already exists');
+                    console.log("Admin user already exists");
                 }
             })
-            .catch((error) => console.log('Error during Data Source initialization', error));
-            const cors = require('cors');
-            app.use(cors({
-                origin: 'http://localhost:3000'
-              }));
-              
+            .catch((error) =>
+                console.log("Error during Data Source initialization", error)
+            );
+        const cors = require("cors");
+        app.use(
+            cors({
+                origin: "http://localhost:3000",
+            })
+        );
 
         console.log("Connected to Postgres");
         app.use(express.json());
@@ -75,4 +87,4 @@ const main = async () => {
     }
 };
 
-main()
+main();
