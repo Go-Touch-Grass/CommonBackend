@@ -7,6 +7,12 @@ export class Business_account extends BaseEntity {
     @PrimaryGeneratedColumn()
     business_id: number;
 
+    @Column()
+    firstName: string;
+
+    @Column()
+    lastName: string;
+
     @Column({
         unique: true
     })

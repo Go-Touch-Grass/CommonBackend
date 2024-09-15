@@ -27,6 +27,7 @@ export const AppDataSource = new DataSource({
 });
 
 const app = express();
+//const cors = require("cors");
 
 const main = async () => {
     try {
@@ -51,6 +52,11 @@ const main = async () => {
                 }
             })
             .catch((error) => console.log('Error during Data Source initialization', error));
+            const cors = require('cors');
+            app.use(cors({
+                origin: 'http://localhost:3000'
+              }));
+              
 
         console.log("Connected to Postgres");
         app.use(express.json());
