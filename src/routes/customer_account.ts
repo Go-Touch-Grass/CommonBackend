@@ -1,10 +1,11 @@
 import express from "express";
-import { authMiddleware } from "src/middleware/auth";
-import { registerCustomer, loginCustomer } from "../controllers/customer_account";
+import { authMiddleware } from "../middleware/auth";
+import { registerCustomer, loginCustomer, getUserInfo } from "../controllers/customer_account";
 
 const router = express.Router();
 
 router.post("/auth/register", registerCustomer);
 router.post("/auth/login", loginCustomer);
+router.get("/auth/user", authMiddleware, getUserInfo);
 
 export { router as customerAccountRouter };

@@ -105,3 +105,29 @@ export const loginCustomer = async (req: Request, res: Response): Promise<void> 
         });
     }
 };
+
+export const getUserInfo = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+        const customer_account = await Customer_account.findOne({
+            where: { id: userId },
+            select: ['id', 'fullName', 'username', 'email']
+        });
+
+        if (!customer_account) {
+            res.status(404).json({
+                status: 404,
+                message: 'User not found'
+            });
+            return;
+        }
+
+        res.json(customer_account);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Internal server error'
+        });
+    }
+};
