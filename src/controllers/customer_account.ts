@@ -5,33 +5,39 @@ import bcrypt from 'bcrypt';
 
 export const registerCustomer = async (req: Request, res: Response): Promise<void> => {
     try {
-        const {
-            username,
-            password
-        } = req.body;
+        const { fullName, username, email, password } = req.body;
 
-        const isUsernameAlreadyInUse = await Customer_account.findOneBy({ username });
+        // Check if username or email is already in use
+        const existingUser = await Customer_account.findOne({
+            where: [{ username }, { email }]
+        });
 
-        if (isUsernameAlreadyInUse) {
+        if (existingUser) {
             res.status(400).json({
                 status: 400,
-                message: 'Username already in use'
+                message: existingUser.username === username ? 'Username already in use' : 'Email already in use'
             });
+            return; // Add this line to exit the function after sending the response
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const customer_account = Customer_account.create({
+            fullName,
             username,
+            email,
             password: hashedPassword,
-
         });
 
         await customer_account.save();
 
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET is not defined');
+        }
+
         const token = jwt.sign(
             { id: customer_account.id, username: customer_account.username }, 
-            process.env.JWT_SECRET as string,
+            process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
 
@@ -41,12 +47,10 @@ export const registerCustomer = async (req: Request, res: Response): Promise<voi
         });
 
     } catch (error) {
-
-        console.log(error);
-
+        console.error(error);
         res.status(400).json({
             status: 400,
-            message: error.message.toString()
+            message: error.message
         });
     }
 };

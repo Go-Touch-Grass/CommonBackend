@@ -1,4 +1,5 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Business_account } from "../entities/Business_account";
 
 //Broadly speaking, there are 5 Retail Industry Areas covering a total of 18 Industry Sectors.
 /*
@@ -37,4 +38,10 @@ export class Business_register_business extends BaseEntity {
         enum: BusinessCategories,
     })
     category: string;
+}
+@OneToOne(() => Business_account, business_account => business_account.business)
+@JoinColumn({
+    name: "business_id"
+})
+business_account: Business_account;
 }

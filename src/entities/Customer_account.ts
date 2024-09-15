@@ -6,10 +6,18 @@ export class Customer_account extends BaseEntity {
     @PrimaryGeneratedColumn()
     id: number;
 
+    @Column()
+    fullName: string;
+
     @Column({
         unique: true
     })
     username: string;
+
+    @Column({
+        unique: true
+    })
+    email: string;
 
     @Column()
     password: string;
