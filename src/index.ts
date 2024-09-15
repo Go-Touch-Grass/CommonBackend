@@ -5,10 +5,11 @@ import { Admin } from "./entities/Admin";
 import { Business_account } from "./entities/Business_account";
 import { Customer_account } from "./entities/Customer_account";
 import { Customer_profile } from "./entities/Customer_profile";
-import { businessCreateAccountRouter } from "./routes/business_create_account";
+import { Business_register_business } from "./entities/Business_register_business";
 import { customerAccountRouter } from "./routes/customer_account";
 import { customerProfileRouter } from "./routes/customer_profile";
-import { Business_register_business } from "./entities/Business_register_business";
+import { businessRegisterBusinessRouter } from "./routes/business_register_business";
+import { businessCreateAccountRouter } from "./routes/business_create_account";
 
 dotenv.config();
 
@@ -52,6 +53,7 @@ const main = async () => {
         console.log("Connected to Postgres");
         app.use(express.json());
         app.use(businessCreateAccountRouter);
+        app.use(businessRegisterBusinessRouter);
         app.use(customerAccountRouter);
         app.use(customerProfileRouter);
 

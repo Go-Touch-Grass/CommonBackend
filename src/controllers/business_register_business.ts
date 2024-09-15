@@ -1,46 +1,38 @@
-/*
+
 import { Request, Response } from 'express';
-import { Business } from '../entities/Business_account';
+
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { Business_register_business } from '../entities/Business_register_business';
 
 // For registering their business after the creation of account 
 export const registerBusiness = async (req: Request, res: Response): Promise<void> => {
     try {
         const {
-            username,
-            password,
-            name
+            entityName,
+            location,
+            category,
         } = req.body;
 
-        const isUsernameAlreadyInUse = await Business.findOneBy({ username });
+        const isUsernameAlreadyInUse = await Business_register_business.findOneBy({ entityName });
 
         if (isUsernameAlreadyInUse) {
             res.status(400).json({
                 status: 400,
-                message: 'Username already in use'
+                message: 'Business EntityName already in use'
             });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const business = Business.create({
-            username,
-            password: hashedPassword,
-            name
+        const registeredBusiness = Business_register_business.create({
+            entityName,
+            location,
+            category,
         });
 
-        await business.save();
-
-        const token = jwt.sign(
-            { id: business.business_id, username: business.username },
-            process.env.JWT_SECRET as string,
-            { expiresIn: '1h' }
-        );
+        await registeredBusiness.save();
 
         res.json({
-            business,
-            token
+            registeredBusiness
         });
 
     } catch (error) {
@@ -54,4 +46,3 @@ export const registerBusiness = async (req: Request, res: Response): Promise<voi
     }
 };
 
-*/
