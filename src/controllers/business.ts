@@ -25,13 +25,14 @@ export const registerBusiness = async (req: Request, res: Response): Promise<voi
         const business = Business.create({
             username,
             password: hashedPassword,
-            name
+            name,
+            role: 'business'
         });
 
         await business.save();
 
         const token = jwt.sign(
-            { id: business.business_id, username: business.username }, 
+            { id: business.business_id, username: business.username, role: business.role }, 
             process.env.JWT_SECRET as string,
             { expiresIn: '1h' }
         );

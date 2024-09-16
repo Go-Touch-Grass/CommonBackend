@@ -1,18 +1,11 @@
-import { BaseEntity, Column, Entity, OneToOne, JoinColumn, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Column, Entity, OneToOne, JoinColumn, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { AbstractUser } from "./abstract/AbstractUser";
 import { Customer_profile } from "./Customer_profile";
 
 @Entity('Customer_account')
-export class Customer_account extends BaseEntity {
+export class Customer_account extends AbstractUser {
     @PrimaryGeneratedColumn()
-    id: number;
-
-    @Column({
-        unique: true
-    })
-    username: string;
-
-    @Column()
-    password: string;
+    customer_id: number;
     
     @OneToOne(
         () => Customer_profile, 

@@ -43,6 +43,7 @@ const main = async () => {
                         username: 'admin',
                         password: hashedPassword,
                         name: 'admin',
+                        role: 'admin'
                     });
 
                     await adminRepository.save(admin);

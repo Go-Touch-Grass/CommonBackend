@@ -1,17 +1,10 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { AbstractUser } from "./abstract/AbstractUser";
 
 @Entity()
-export class Admin extends BaseEntity {
+export class Admin extends AbstractUser {
     @PrimaryGeneratedColumn()
     admin_id: number;
-
-    @Column({
-        unique: true
-    })
-    username: string;
-
-    @Column()
-    password: string;
 
     @Column()
     name: string;

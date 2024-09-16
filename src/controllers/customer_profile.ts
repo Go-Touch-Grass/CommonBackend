@@ -19,7 +19,7 @@ export const registerCustomerProfile = async (req: Request, res: Response) => {
 
     const customer_account = await Customer_account.findOne({
         where: {
-            id: parseInt(customerId),
+            customer_id: parseInt(customerId),
         },
     });
 

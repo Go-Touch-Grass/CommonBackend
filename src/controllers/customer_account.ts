@@ -24,13 +24,13 @@ export const registerCustomer = async (req: Request, res: Response): Promise<voi
         const customer_account = Customer_account.create({
             username,
             password: hashedPassword,
-
+            role: 'customer'
         });
 
         await customer_account.save();
 
         const token = jwt.sign(
-            { id: customer_account.id, username: customer_account.username }, 
+            { id: customer_account.customer_id, username: customer_account.username, role: customer_account.role }, 
             process.env.JWT_SECRET as string,
             { expiresIn: '1h' }
         );
