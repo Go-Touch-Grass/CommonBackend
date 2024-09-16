@@ -38,10 +38,11 @@ export class Business_register_business extends BaseEntity {
         enum: BusinessCategories,
     })
     category: string;
-}
+
 @OneToOne(() => Business_account, business_account => business_account.business)
 @JoinColumn({
     name: "business_id"
 })
 business_account: Business_account;
+
 }
