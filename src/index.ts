@@ -5,15 +5,15 @@ import { Admin } from "./entities/Admin";
 import { Business_account } from "./entities/Business_account";
 import { Customer_account } from "./entities/Customer_account";
 import { Customer_profile } from "./entities/Customer_profile";
-import { businessCreateAccountRouter } from "./routes/business_create_account";
+import { Business_register_business } from "./entities/Business_register_business";
 import { customerAccountRouter } from "./routes/customer_account";
 import { customerProfileRouter } from "./routes/customer_profile";
+import { businessRegisterBusinessRouter } from "./routes/business_register_business";
+import { businessCreateAccountRouter } from "./routes/business_create_account";
 import { Business_register_business } from "./entities/Business_register_business";
 import { businessLoginAccountRouter } from "./routes/business_login_account";
 import { businessLogoutAccountRouter } from "./routes/business_logout_account";
 import { Outlet } from "./entities/Outlet";
-import { businessRetrieveAccountRouter } from "./routes/business_retrieve_profile";
-import { businessEditAccountRouter } from "./routes/business_edit_profile";
 
 dotenv.config();
 
@@ -24,7 +24,7 @@ export const AppDataSource = new DataSource({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    entities: [Admin, Business_account, Business_register_business, Customer_account, Customer_profile,Outlet],
+    entities: [Admin, Business_account, Business_register_business, Customer_account, Customer_profile, Outlet],
     synchronize: true
 });
 
@@ -54,22 +54,21 @@ const main = async () => {
                 }
             })
             .catch((error) => console.log('Error during Data Source initialization', error));
-            
-            const cors = require('cors');
-            app.use(cors({
-                origin: 'http://localhost:3000'
-              }));
-              
+        const cors = require('cors');
+        app.use(cors({
+            origin: 'http://localhost:3000'
+        }));
+
 
         console.log("Connected to Postgres");
         app.use(express.json());
         app.use(businessCreateAccountRouter);
+        app.use(businessRegisterBusinessRouter);
         app.use(customerAccountRouter);
         app.use(customerProfileRouter);
         app.use(businessLoginAccountRouter);
         app.use(businessLogoutAccountRouter);
-        app.use(businessRetrieveAccountRouter)
-        app.use(businessEditAccountRouter)
+
         app.listen(8080, () => {
             console.log("Now running on port 8080");
         });
