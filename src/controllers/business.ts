@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Business } from '../entities/business';
+import { Business } from '../entities/Business';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 

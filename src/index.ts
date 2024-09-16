@@ -2,9 +2,11 @@ import { DataSource } from "typeorm";
 import * as dotenv from "dotenv";
 import express from "express";
 import { Admin } from "./entities/Admin";
-import { Business } from "./entities/business";
+import bcrypt from "bcrypt";
+import { Business } from "./entities/Business";
 import { Customer_account } from "./entities/Customer_account";
 import { Customer_profile } from "./entities/Customer_profile";
+import { adminRouter } from "./routes/admin";
 import { businessRouter } from "./routes/business";
 import { customerAccountRouter } from "./routes/customer_account";
 import { customerProfileRouter } from "./routes/customer_profile";
@@ -34,9 +36,12 @@ const main = async () => {
                 const existingAdmin = await adminRepository.findOneBy({ username: 'admin' });
 
                 if (!existingAdmin) {
+                    const password = 'password';
+                    const hashedPassword = await bcrypt.hash(password, 10);
+
                     const admin = adminRepository.create({
                         username: 'admin',
-                        password: 'password',
+                        password: hashedPassword,
                         name: 'admin',
                     });
 
@@ -50,6 +55,7 @@ const main = async () => {
 
         console.log("Connected to Postgres");
         app.use(express.json());
+        app.use(adminRouter);
         app.use(businessRouter);
         app.use(customerAccountRouter);
         app.use(customerProfileRouter);
