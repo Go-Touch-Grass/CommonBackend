@@ -12,6 +12,8 @@ import { Business_register_business } from "./entities/Business_register_busines
 import { businessLoginAccountRouter } from "./routes/business_login_account";
 import { businessLogoutAccountRouter } from "./routes/business_logout_account";
 import { Outlet } from "./entities/Outlet";
+import { businessRetrieveAccountRouter } from "./routes/business_retrieve_profile";
+import { businessEditAccountRouter } from "./routes/business_edit_profile";
 
 dotenv.config();
 
@@ -52,6 +54,7 @@ const main = async () => {
                 }
             })
             .catch((error) => console.log('Error during Data Source initialization', error));
+            
             const cors = require('cors');
             app.use(cors({
                 origin: 'http://localhost:3000'
@@ -65,7 +68,8 @@ const main = async () => {
         app.use(customerProfileRouter);
         app.use(businessLoginAccountRouter);
         app.use(businessLogoutAccountRouter);
-
+        app.use(businessRetrieveAccountRouter)
+        app.use(businessEditAccountRouter)
         app.listen(8080, () => {
             console.log("Now running on port 8080");
         });
