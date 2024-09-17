@@ -1,11 +1,22 @@
 import multer from 'multer';
 import path from 'path';
-
+import fs from 'fs';
 //Multer is a middleware for handling multipart/form-data requests, specifically designed for file uploads in Node.js.
+
+const uploadDir = 'C://GoTouchGrass//uploads';
+
+// Ensure the directory exists
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true }); // Create the directory if it doesn't exist
+}
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'C://GoTouchGrass//uploads'); // uploaded files will be stored in this directory
+        // Ensure the directory exists each time (not strictly necessary after the initial check)
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir); // uploaded files will be stored in this directory
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
