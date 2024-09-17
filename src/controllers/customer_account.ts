@@ -3,6 +3,22 @@ import { Customer_account } from '../entities/Customer_account';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
+// Function to calculate total XP required to reach a certain level
+function calculateTotalXpForLevel(level: number): number {
+    if (level <= 1) return 0;
+    return Math.floor(100 * (Math.pow(1.5, level - 1) - 1) / (1.5 - 1));
+}
+
+// Function to calculate the player's current level based on total XP
+function calculateLevel(exp: number): number {
+    return Math.floor(Math.log((exp * (1.5 - 1)) / 100 + 1) / Math.log(1.5)) + 1;
+}
+
+// For calculating progress in front end
+function calculateXpForNextLevel(level: number): number {
+    return Math.floor(100 * Math.pow(1.5, level - 1));
+}
+
 export const registerCustomer = async (req: Request, res: Response): Promise<void> => {
     try {
         const { fullName, username, email, password } = req.body;
@@ -27,6 +43,7 @@ export const registerCustomer = async (req: Request, res: Response): Promise<voi
             username,
             email,
             password: hashedPassword,
+            exp: 0, 
         });
 
         await customer_account.save();
@@ -111,7 +128,7 @@ export const getUserInfo = async (req: Request, res: Response): Promise<void> =>
         const userId = (req as any).user.id;
         const customer_account = await Customer_account.findOne({
             where: { id: userId },
-            select: ['id', 'fullName', 'username', 'email']
+            select: ['id', 'fullName', 'username', 'email', 'exp']
         });
 
         if (!customer_account) {
@@ -122,7 +139,18 @@ export const getUserInfo = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        res.json(customer_account);
+        const currentLevel = calculateLevel(customer_account.exp);
+        //Total xp required to reach current level
+        const xpForCurrentLevel = calculateTotalXpForLevel(currentLevel);
+        // Xp required between current level and next level
+        const xpForNextLevel = calculateTotalXpForLevel(currentLevel + 1) - xpForCurrentLevel;
+
+        res.json({
+            ...customer_account,
+            currentLevel,
+            xpForNextLevel,
+            xpProgress: customer_account.exp - xpForCurrentLevel
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({

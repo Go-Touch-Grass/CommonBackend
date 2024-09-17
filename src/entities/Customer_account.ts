@@ -30,6 +30,9 @@ export class Customer_account extends AbstractUser {
     @Column()
     password: string;
 
+    @Column({ default: 0 })
+    exp: number;
+
     @CreateDateColumn()
     created_at: Date;
 
