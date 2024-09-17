@@ -1,5 +1,5 @@
 import { BaseEntity, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
-import { Business_register_business } from "../entities/Business_register_business"; // Ensure this path is correct
+import { Business_register_business } from "./Business_register_business";
 import { Outlet } from "./Outlet";
 
 @Entity('business_account')
@@ -24,7 +24,9 @@ export class Business_account extends BaseEntity {
     @Column()
     email: string;
 
-    @OneToOne(() => Business_register_business, business_register_business => business_register_business.business_account)
+    @OneToOne(
+        () => Business_register_business,
+        business_register_business => business_register_business.business_account)
     business: Business_register_business;
 
     @OneToMany(() => Outlet, outlet => outlet.business)

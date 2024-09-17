@@ -1,5 +1,5 @@
 import { BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "typeorm";
-import { Business_account } from "../entities/Business_account";
+import { Business_account } from "./Business_account";
 
 //Broadly speaking, there are 5 Retail Industry Areas covering a total of 18 Industry Sectors.
 /*
@@ -19,11 +19,16 @@ export enum BusinessCategories {
     WHOLESALEnLOGISTICS = 'wholesalenlogistics'
 }
 
+export enum statusEnum {
+    PENDING = 'pending',
+    APPROVED = 'approved',
+    REJECTED = 'rejected'
+}
 
 @Entity('business_register_business')
 export class Business_register_business extends BaseEntity {
     @PrimaryGeneratedColumn()
-    business_id: number;
+    registration_id: number;
 
     @Column({
         unique: true
@@ -39,10 +44,24 @@ export class Business_register_business extends BaseEntity {
     })
     category: string;
 
-@OneToOne(() => Business_account, business_account => business_account.business)
-@JoinColumn({
-    name: "business_id"
-})
-business_account: Business_account;
+    @Column()
+    proof: string;
+
+    @Column({
+        type: 'enum',
+        enum: statusEnum,
+    })
+    status: string;
+
+    @Column({
+        nullable: true,
+    })
+    remarks: string; // reason for rejection
+
+    @OneToOne(() => Business_account, business_account => business_account.business)
+    @JoinColumn({
+        name: "business_id"
+    })
+    business_account: Business_account;
 
 }
