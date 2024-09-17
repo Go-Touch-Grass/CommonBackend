@@ -11,6 +11,7 @@ export const createAccount = async (req: Request, res: Response): Promise<void> 
             email,
             username,
             password
+            
         } = req.body;
 
         

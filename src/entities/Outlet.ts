@@ -7,13 +7,16 @@ export class Outlet extends BaseEntity {
     outlet_id: number;
 
     @Column()
+    outlet_name: string;
+
+    @Column()
     location: string;
 
     @Column()
-    outlet_type: string;
+    description: string;
 
     @Column()
-    size: number;
+    contact: string;
     
     @ManyToOne(() => Business_account, business_account => business_account.outlets)
     @JoinColumn({

@@ -9,13 +9,14 @@ import { Business_register_business } from "./entities/Business_register_busines
 
 import { customerAccountRouter } from "./routes/customer_account";
 import { customerProfileRouter } from "./routes/customer_profile";
-import { businessRegisterBusinessRouter } from "./routes/business_register_business";
+//import { businessRegisterBusinessRouter } from "./routes/business_register_business";
 import { businessCreateAccountRouter } from "./routes/business_create_account";
 import { businessLoginAccountRouter } from "./routes/business_login_account";
 import { businessLogoutAccountRouter } from "./routes/business_logout_account";
 import { Outlet } from "./entities/Outlet";
 import { businessRetrieveAccountRouter } from "./routes/business_retrieve_profile";
 import { businessEditAccountRouter } from "./routes/business_edit_profile";
+import { businessCreateOutletRouter } from "./routes/business_create_outlet";
 
 
 dotenv.config();
@@ -66,13 +67,14 @@ const main = async () => {
         console.log("Connected to Postgres");
         app.use(express.json());
         app.use(businessCreateAccountRouter);
-        app.use(businessRegisterBusinessRouter);
+        //app.use(businessRegisterBusinessRouter);
         app.use(customerAccountRouter);
         app.use(customerProfileRouter);
         app.use(businessLoginAccountRouter);
         app.use(businessLogoutAccountRouter);
         app.use(businessRetrieveAccountRouter);
         app.use(businessEditAccountRouter);
+        app.use(businessCreateOutletRouter);
 
         app.listen(8080, () => {
             console.log("Now running on port 8080");
