@@ -1,5 +1,5 @@
 
-/*import { Request, Response } from 'express'; 
+import { Request, Response } from 'express';
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
@@ -15,7 +15,9 @@ export const registerBusiness = async (req: Request, res: Response): Promise<voi
             category,
             username,
         } = req.body;
-
+        console.log("Request body: ", req.body);
+        console.log("Request file: ", req.file);
+        console.log(req.body.username);
         const isUsernameAlreadyInUse = await Business_register_business.findOneBy({ entityName });
 
         if (isUsernameAlreadyInUse) {

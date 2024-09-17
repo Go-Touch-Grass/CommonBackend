@@ -9,7 +9,7 @@ import { Business_register_business } from "./entities/Business_register_busines
 
 import { customerAccountRouter } from "./routes/customer_account";
 import { customerProfileRouter } from "./routes/customer_profile";
-//import { businessRegisterBusinessRouter } from "./routes/business_register_business";
+import { businessRegisterBusinessRouter } from "./routes/business_register_business";
 import { businessCreateAccountRouter } from "./routes/business_create_account";
 import { businessLoginAccountRouter } from "./routes/business_login_account";
 import { businessLogoutAccountRouter } from "./routes/business_logout_account";
@@ -67,7 +67,7 @@ const main = async () => {
         console.log("Connected to Postgres");
         app.use(express.json());
         app.use(businessCreateAccountRouter);
-        //app.use(businessRegisterBusinessRouter);
+        app.use(businessRegisterBusinessRouter);
         app.use(customerAccountRouter);
         app.use(customerProfileRouter);
         app.use(businessLoginAccountRouter);
