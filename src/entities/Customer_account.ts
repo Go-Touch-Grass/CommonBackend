@@ -5,7 +5,23 @@ import { Customer_profile } from "./Customer_profile";
 @Entity('Customer_account')
 export class Customer_account extends AbstractUser {
     @PrimaryGeneratedColumn()
-    customer_id: number;
+    id: number;
+
+    @Column()
+    fullName: string;
+
+    @Column({
+        unique: true
+    })
+    username: string;
+
+    @Column({
+        unique: true
+    })
+    email: string;
+
+    @Column()
+    password: string;
     
     @OneToOne(
         () => Customer_profile, 
