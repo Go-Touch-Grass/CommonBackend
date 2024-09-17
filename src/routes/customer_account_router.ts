@@ -1,7 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth";
-import { registerCustomer, loginCustomer, getUserInfo, editProfile, deleteAccount } from "../controllers/customer_account";
-import { UserRole } from '../entities/abstract/AbstractUser'; // Make sure to import UserRole
+import { registerCustomer, loginCustomer, getUserInfo, editProfile, deleteAccount, changePassword } from "../controllers/customer_account";
+import { UserRole } from '../entities/abstract/AbstractUser';
 
 const router = express.Router();
 
@@ -10,5 +10,6 @@ router.post("/auth/login", loginCustomer);
 router.get("/auth/profile", authMiddleware([UserRole.CUSTOMER]), getUserInfo);
 router.put("/auth/profile/edit", authMiddleware([UserRole.CUSTOMER]), editProfile);
 router.delete("/auth/profile/delete", authMiddleware([UserRole.CUSTOMER]), deleteAccount);
+router.post("/auth/change-password", authMiddleware([UserRole.CUSTOMER]), changePassword);
 
 export { router as customerAccountRouter };

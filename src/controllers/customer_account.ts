@@ -183,6 +183,7 @@ export const getUserInfo = async (
         });
     }
 };
+
 export const editProfile = async (
     req: Request,
     res: Response
@@ -275,6 +276,59 @@ export const deleteAccount = async (
         res.json({
             status: 200,
             message: "Account deleted successfully",
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            status: 500,
+            message: "Internal server error",
+        });
+    }
+};
+
+export const changePassword = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+        const { currentPassword, newPassword } = req.body;
+
+        const customer_account = await Customer_account.findOne({
+            where: { id: userId },
+        });
+
+        if (!customer_account) {
+            res.status(404).json({
+                status: 404,
+                message: "User not found",
+            });
+            return;
+        }
+
+        // Verify current password
+        const isPasswordValid = await bcrypt.compare(
+            currentPassword,
+            customer_account.password
+        );
+
+        if (!isPasswordValid) {
+            res.status(401).json({
+                status: 401,
+                message: "Current password is incorrect",
+            });
+            return;
+        }
+
+        // Hash and set new password
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+        customer_account.password = hashedNewPassword;
+
+        await customer_account.save();
+
+        res.json({
+            status: 200,
+            message: "Password changed successfully",
         });
     } catch (error) {
         console.error(error);
