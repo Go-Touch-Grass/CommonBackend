@@ -36,8 +36,8 @@ export const registerCustomer = async (req: Request, res: Response): Promise<voi
         }
 
         const token = jwt.sign(
-            { id: customer_account.id, username: customer_account.username }, 
-            process.env.JWT_SECRET,
+            { id: customer_account.id, username: customer_account.username, role: customer_account.role }, 
+            process.env.JWT_SECRET as string,
             { expiresIn: '1h' }
         );
 
@@ -87,8 +87,8 @@ export const loginCustomer = async (req: Request, res: Response): Promise<void> 
         }
 
         const token = jwt.sign(
-            { id: customer_account.id, username: customer_account.username }, 
-            process.env.JWT_SECRET,
+            { id: customer_account.id, username: customer_account.username, role: customer_account.role }, 
+            process.env.JWT_SECRET as string,
             { expiresIn: '1h' }
         );
 

@@ -1,8 +1,15 @@
-import { Column, Entity, OneToOne, JoinColumn, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { AbstractUser } from "./abstract/AbstractUser";
-import { Customer_profile } from "./Customer_profile";
+import {
+    Column,
+    Entity,
+    OneToOne,
+    JoinColumn,
+    PrimaryGeneratedColumn,
+    CreateDateColumn,
+    UpdateDateColumn,
+} from "typeorm";
+import { AbstractUser, UserRole } from './abstract/AbstractUser';
 
-@Entity('Customer_account')
+@Entity("Customer_account")
 export class Customer_account extends AbstractUser {
     @PrimaryGeneratedColumn()
     id: number;
@@ -11,33 +18,28 @@ export class Customer_account extends AbstractUser {
     fullName: string;
 
     @Column({
-        unique: true
+        unique: true,
     })
     username: string;
 
     @Column({
-        unique: true
+        unique: true,
     })
     email: string;
 
     @Column()
     password: string;
-    
-    @OneToOne(
-        () => Customer_profile, 
-        profile => profile.customer_account, 
-        { 
-            cascade : true
-        }
-    )
-    @JoinColumn({
-        name:'customer_id'
-    })
-    customer_profile: Customer_profile 
 
     @CreateDateColumn()
     created_at: Date;
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    @Column({
+        type: "enum",
+        enum: UserRole,
+        default: UserRole.CUSTOMER
+    })
+    role: UserRole = UserRole.CUSTOMER;
 }

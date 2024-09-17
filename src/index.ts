@@ -5,15 +5,14 @@ import { Admin } from "./entities/Admin";
 import bcrypt from "bcrypt";
 import { Business } from "./entities/Business";
 import { Customer_account } from "./entities/Customer_account";
-import { Customer_profile } from "./entities/Customer_profile";
 import { adminRouter } from "./routes/admin";
-import { businessRouter } from "./routes/business";
+// import { businessRouter } from "./routes/business";
 import { customerAccountRouter } from "./routes/customer_account";
-import { customerProfileRouter } from "./routes/customer_profile";
 import { Business_register_business } from "./entities/Business_register_business";
 import { businessLoginAccountRouter } from "./routes/business_login_account";
 import { businessLogoutAccountRouter } from "./routes/business_logout_account";
 import { Outlet } from "./entities/Outlet";
+import { Business_account } from "./entities/Business_account"; // Add this line
 
 dotenv.config();
 
@@ -29,7 +28,6 @@ export const AppDataSource = new DataSource({
         Business_account,
         Business_register_business,
         Customer_account,
-        Customer_profile,
         Outlet,
     ],
     synchronize: true,
@@ -79,9 +77,8 @@ const main = async () => {
         console.log("Connected to Postgres");
         app.use(express.json());
         app.use(adminRouter);
-        app.use(businessRouter);
+        // app.use(businessRouter);
         app.use(customerAccountRouter);
-        app.use(customerProfileRouter);
         app.use(businessLoginAccountRouter);
         app.use(businessLogoutAccountRouter);
 
