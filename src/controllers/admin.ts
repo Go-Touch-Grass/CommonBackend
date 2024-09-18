@@ -97,6 +97,36 @@ export const getOnePendingBusinessRegistration = async (req: Request, res: Respo
     }
 }
 
+export const reviewOnePendingBusinessRegistration = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { registration_id } = req.params;
+        const id = parseInt(registration_id);
+        const { status, remarks } = req.body;
+        const pendingBusinessRegistration = await Business_register_business.findOneBy({ registration_id: id }); // Fetch one pending business
+
+        if (!pendingBusinessRegistration) {
+            res.status(400).json({
+                status: 400,
+                message: 'Business registration not found'
+            });
+            return;
+        }
+
+        pendingBusinessRegistration.status = status;
+        pendingBusinessRegistration.remarks = remarks;
+
+        await pendingBusinessRegistration.save();
+
+        res.status(200).json(pendingBusinessRegistration);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to update business registration'
+        });
+    }
+}
+
 // Customer-related business logic below
 
 export const getAllCustomers = async (req: Request, res: Response): Promise<void> => {
