@@ -8,7 +8,7 @@ export const loginAccount = async (req: Request, res: Response): Promise<void> =
     try {
         const { username, password } = req.body;
 
-        
+
         if (!username || !password) {
             res.status(400).json({
                 status: 400,
@@ -17,7 +17,7 @@ export const loginAccount = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        
+
         const business = await Business_account.findOneBy({ username });
 
         if (!business) {
