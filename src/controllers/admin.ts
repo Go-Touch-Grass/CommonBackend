@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { Admin } from '../entities/Admin';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { Business } from '../entities/Business';
+import { Business_account } from '../entities/Business_account';
+import { Business_register_business, statusEnum } from '../entities/Business_register_business';
 import { Customer_account } from '../entities/Customer_account';
 
 export const loginAdmin = async (req: Request, res: Response): Promise<void> => {
@@ -53,13 +54,28 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
 
 export const getAllBusinesses = async (req: Request, res: Response): Promise<void> => {
     try {
-        const businesses = await Business.find(); // Fetch all businesses
+        const businesses = await Business_account.find(); // Fetch all businesses
         res.status(200).json(businesses);
     } catch (error) {
         console.log(error);
         res.status(500).json({
             status: 500,
             message: 'Failed to fetch businesses'
+        });
+    }
+}
+
+export const getAllPendingBusinessRegistrations = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const pendingBusinessRegistrations = await Business_register_business.find({ 
+            where: { status: 'pending' }, // Fetch all pending businesses
+        });
+        res.status(200).json(pendingBusinessRegistrations);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to fetch pending businesses'
         });
     }
 }
