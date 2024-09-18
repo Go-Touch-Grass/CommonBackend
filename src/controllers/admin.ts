@@ -67,6 +67,21 @@ export const getAllBusinesses = async (req: Request, res: Response): Promise<voi
     }
 }
 
+export const getOneBusiness = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { business_id } = req.params;
+        const id = parseInt(business_id);
+        const business = await Business_account.findOneBy({ business_id: id }); // Fetch one business
+        res.status(200).json(business);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to fetch business'
+        });
+    }
+}
+
 export const getAllPendingBusinessRegistrations = async (req: Request, res: Response): Promise<void> => {
     try {
         const pendingBusinessRegistrations = await Business_register_business.find({ 
