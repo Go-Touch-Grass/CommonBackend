@@ -14,12 +14,12 @@ export const retrieveProfile = async (req: Request, res: Response): Promise<void
         }
 
         // Find the business account by username and include related outlets
-        const business = await Business_account.findOne({
+        const businessAccount = await Business_account.findOne({
             where: { username },
-            relations: ['outlets'], // Assuming the relation is called 'outlets' in your entity
+            relations: ['outlets','business'], // Assuming the relation is called 'outlets' in your entity
         });
 
-        if (!business) {
+        if (!businessAccount) {
             res.status(404).json({
                 status: 404,
                 message: 'User not found',
@@ -30,12 +30,13 @@ export const retrieveProfile = async (req: Request, res: Response): Promise<void
         res.json({
             status: 200,
             business: {
-                firstName: business.firstName,
-                lastName: business.lastName,
-                email: business.email,
-                username: business.username,
+                firstName: businessAccount.firstName,
+                lastName: businessAccount.lastName,
+                email: businessAccount.email,
+                username: businessAccount.username,
             },
-            outlets: business.outlets,
+            outlets: businessAccount.outlets,
+            registeredBusiness: businessAccount.business
         });
     } catch (error) {
         console.error('Error retrieving profile:', error);

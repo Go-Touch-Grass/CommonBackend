@@ -9,6 +9,7 @@ export const createOutlet = async (req: Request, res: Response): Promise<void> =
         const { username } = req.params;
         const { outlet_name, location, contact, description } = req.body;
         
+        console.log(username);
 
         const business = await Business_account.findOneBy({ username });
         if (!business) {

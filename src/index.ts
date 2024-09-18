@@ -6,7 +6,6 @@ import { Business_account } from "./entities/Business_account";
 import { Customer_account } from "./entities/Customer_account";
 import { Customer_profile } from "./entities/Customer_profile";
 import { Business_register_business } from "./entities/Business_register_business";
-
 import { customerAccountRouter } from "./routes/customer_account";
 import { customerProfileRouter } from "./routes/customer_profile";
 import { businessRegisterBusinessRouter } from "./routes/business_register_business";
