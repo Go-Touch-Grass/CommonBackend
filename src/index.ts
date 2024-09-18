@@ -76,11 +76,26 @@ const main = async () => {
                 console.log("Error during Data Source initialization", error)
             );
         const cors = require("cors");
+        const allowedOrigins = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"];
+        app.use(
+            cors({
+                origin: function (origin, callback) {
+                    // If origin is in the allowed origins list or if it's undefined (like in some local testing environments)
+                    if (!origin || allowedOrigins.includes(origin)) {
+                        callback(null, true);
+                    } else {
+                        callback(new Error("Not allowed by CORS"));
+                    }
+                },
+            })
+        );
+        /*
         app.use(
             cors({
                 origin: "http://localhost:3000",
             })
         );
+        */
 
         console.log("Connected to Postgres");
 
