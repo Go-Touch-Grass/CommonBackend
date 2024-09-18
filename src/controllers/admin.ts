@@ -52,6 +52,8 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
     }
 }
 
+// Business-related business logic below
+
 export const getAllBusinesses = async (req: Request, res: Response): Promise<void> => {
     try {
         const businesses = await Business_account.find(); // Fetch all businesses
@@ -79,6 +81,23 @@ export const getAllPendingBusinessRegistrations = async (req: Request, res: Resp
         });
     }
 }
+
+export const getOnePendingBusinessRegistration = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { registration_id } = req.params;
+        const id = parseInt(registration_id);
+        const pendingBusinessRegistration = await Business_register_business.findOneBy({ registration_id: id }); // Fetch one pending business
+        res.status(200).json(pendingBusinessRegistration);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to fetch pending business'
+        });
+    }
+}
+
+// Customer-related business logic below
 
 export const getAllCustomers = async (req: Request, res: Response): Promise<void> => {
     try {
