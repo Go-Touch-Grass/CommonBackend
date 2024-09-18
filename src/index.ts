@@ -1,6 +1,7 @@
 import { DataSource } from "typeorm";
 import * as dotenv from "dotenv";
 import express from "express";
+import path from 'path';
 import { Admin } from "./entities/Admin";
 import bcrypt from "bcrypt";
 import { Business } from "./entities/Business";
@@ -9,6 +10,7 @@ import { adminRouter } from "./routes/admin";
 // import { businessRouter } from "./routes/business";
 import { customerAccountRouter } from "./routes/customer_account_router";
 import { Business_register_business } from "./entities/Business_register_business";
+
 import { businessLoginAccountRouter } from "./routes/business_login_account";
 import { businessLogoutAccountRouter } from "./routes/business_logout_account";
 import { Outlet } from "./entities/Outlet";
@@ -81,9 +83,15 @@ const main = async () => {
         );
 
         console.log("Connected to Postgres");
+
         app.use(express.json());
         app.use(adminRouter);
         // app.use(businessRouter);
+
+        // Serve static files from the uploads folder
+        app.use('/uploads', express.static(path.join('C://GoTouchGrass/uploads', '../uploads'))); // Serve the "uploads" directory
+
+
         app.use(businessCreateAccountRouter);
         app.use(businessRegisterBusinessRouter);
         app.use(customerAccountRouter);

@@ -24,6 +24,9 @@ export class Business_account extends BaseEntity {
     @Column()
     email: string;
 
+    @Column({ nullable: true })
+    profileImage: string;
+
     @OneToOne(
         () => Business_register_business,
         business_register_business => business_register_business.business_account)
