@@ -49,7 +49,8 @@ export const registerBusiness = async (req: Request, res: Response): Promise<voi
             entityName,
             location,
             category,
-            proof: req.file.path, // store the file path or URL.
+            //proof: req.file.path, // store the file path or URL.
+            proof: `uploads/proofOfBusiness/${req.file.filename}`, // store relative path
             status: 'pending',
             remarks: "",
             business_account: businessAccount // Link the business_account entity to business_register_business

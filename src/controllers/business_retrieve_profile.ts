@@ -16,7 +16,7 @@ export const retrieveProfile = async (req: Request, res: Response): Promise<void
         // Find the business account by username and include related outlets
         const businessAccount = await Business_account.findOne({
             where: { username },
-            relations: ['outlets','business'], // Assuming the relation is called 'outlets' in your entity
+            relations: ['outlets', 'business'], // Assuming the relation is called 'outlets' in your entity
         });
 
         if (!businessAccount) {
@@ -34,6 +34,7 @@ export const retrieveProfile = async (req: Request, res: Response): Promise<void
                 lastName: businessAccount.lastName,
                 email: businessAccount.email,
                 username: businessAccount.username,
+                profileImage: businessAccount.profileImage, // Return image path
             },
             outlets: businessAccount.outlets,
             registeredBusiness: businessAccount.business
@@ -46,3 +47,5 @@ export const retrieveProfile = async (req: Request, res: Response): Promise<void
         });
     }
 };
+
+

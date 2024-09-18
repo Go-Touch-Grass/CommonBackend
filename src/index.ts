@@ -1,6 +1,7 @@
 import { DataSource } from "typeorm";
 import * as dotenv from "dotenv";
 import express from "express";
+import path from 'path';
 import { Admin } from "./entities/Admin";
 import { Business_account } from "./entities/Business_account";
 import { Customer_account } from "./entities/Customer_account";
@@ -64,7 +65,13 @@ const main = async () => {
 
 
         console.log("Connected to Postgres");
+
         app.use(express.json());
+
+        // Serve static files from the uploads folder
+        app.use('/uploads', express.static(path.join('C://GoTouchGrass/uploads', '../uploads'))); // Serve the "uploads" directory
+
+
         app.use(businessCreateAccountRouter);
         app.use(businessRegisterBusinessRouter);
         app.use(customerAccountRouter);

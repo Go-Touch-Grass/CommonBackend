@@ -88,3 +88,50 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
         });
     }
 };
+
+export const uploadProfileImage = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const {
+            username,
+        } = req.body;
+        console.log("Request body: ", req.body);
+        console.log("Request file: ", req.file);
+        console.log(req.body.username);
+
+        // Check if req.file is defined
+        if (!req.file) {
+            res.status(400).json({
+                status: 400,
+                message: 'Profile Image is required'
+            });
+            return; // Exit the function early if no file is provided
+        }
+
+        const businessAccount = await Business_account.findOneBy({ username });
+        if (!businessAccount) {
+            res.status(400).json({
+                status: 400,
+                message: 'Business Account not found'
+            });
+            return;
+        }
+
+        //const imagePath = req.file.path;  // Path of the uploaded file
+        //businessAccount.profileImage = imagePath;  // store the file path or URL.
+        const fileName = req.file.filename;  // Get the file name
+        businessAccount.profileImage = `uploads/profileImages/${fileName}`;  // Save relative path in DB        
+        await businessAccount.save();
+
+        res.status(200).json({ message: 'Profile image uploaded successfully', imagePath: businessAccount.profileImage });
+
+
+    } catch (error) {
+
+        console.log(error);
+
+        res.status(400).json({
+            status: 400,
+            message: error.message.toString()
+        });
+    }
+}
