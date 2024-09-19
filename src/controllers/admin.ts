@@ -156,3 +156,18 @@ export const getAllCustomers = async (req: Request, res: Response): Promise<void
         });
     }
 }
+
+export const getOneCustomer = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { customer_id } = req.params;
+        const id = parseInt(customer_id);
+        const customer = await Customer_account.findOneBy({ id: id }); // Fetch one customer
+        res.status(200).json(customer);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to fetch customer'
+        });
+    }
+}

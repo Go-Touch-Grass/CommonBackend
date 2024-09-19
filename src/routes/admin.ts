@@ -8,6 +8,7 @@ import {
     getOnePendingBusinessRegistration,
     reviewOnePendingBusinessRegistration,
     getAllCustomers,
+    getOneCustomer,
 } from "../controllers/admin";
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.get("/api/admin/registration/:registration_id", authMiddleware(["admin"])
 router.put("/api/admin/registration/:registration_id", authMiddleware(["admin"]), reviewOnePendingBusinessRegistration);
 
 router.get("/api/admin/customer", authMiddleware(["admin"]), getAllCustomers);
+router.get("/api/admin/customer/:customer_id", authMiddleware(["admin"]), getOneCustomer);
 
 export { router as adminRouter };
