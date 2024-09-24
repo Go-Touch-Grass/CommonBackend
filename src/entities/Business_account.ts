@@ -1,9 +1,10 @@
 import { BaseEntity, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Business_register_business } from "./Business_register_business";
 import { Outlet } from "./Outlet";
+import { AbstractUser, UserRole } from "./abstract/AbstractUser";
 
 @Entity('business_account')
-export class Business_account extends BaseEntity {
+export class Business_account extends AbstractUser {
     @PrimaryGeneratedColumn()
     business_id: number;
 
@@ -13,6 +14,7 @@ export class Business_account extends BaseEntity {
     @Column()
     lastName: string;
 
+    /* extended from AbstractUser
     @Column({
         unique: true
     })
@@ -20,6 +22,7 @@ export class Business_account extends BaseEntity {
 
     @Column()
     password: string;
+    */
 
     @Column()
     email: string;
@@ -34,4 +37,10 @@ export class Business_account extends BaseEntity {
 
     @OneToMany(() => Outlet, outlet => outlet.business)
     outlets: Outlet[];
+
+    constructor() {
+        super();
+        // Automatically set the role to business for any new instance
+        this.role = UserRole.BUSINESS;
+    }
 }
