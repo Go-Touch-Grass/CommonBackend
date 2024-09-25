@@ -1,6 +1,6 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth";
-import { createAccount, createOutlet, deleteOutlet, loginAccount, logoutAccount, registerBusiness, retrieveProfile, updateProfile, uploadProfileImage } from "../controllers/business";
+import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, retrieveProfile, updateProfile, uploadProfileImage } from "../controllers/business";
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
 import { UserRole } from "../entities/abstract/AbstractUser";
 
@@ -27,4 +27,5 @@ router.post("/api/business/registerBusiness", proofBusinessUpload.single('proof'
 router.post('/api/business/outlets', authMiddleware([UserRole.BUSINESS]), createOutlet);
 router.delete('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSINESS]), deleteOutlet);
 
+router.delete('/api/business/account', authMiddleware([UserRole.BUSINESS]), deleteAccount);
 export { router as businessRouter };

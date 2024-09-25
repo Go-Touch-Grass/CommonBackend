@@ -32,10 +32,12 @@ export class Business_account extends AbstractUser {
 
     @OneToOne(
         () => Business_register_business,
-        business_register_business => business_register_business.business_account)
+        business_register_business => business_register_business.business_account,
+        //{ cascade: true, onDelete: "CASCADE" } //cascade delete, can also set ID to null
+    )
     business: Business_register_business;
 
-    @OneToMany(() => Outlet, outlet => outlet.business)
+    @OneToMany(() => Outlet, outlet => outlet.business, { cascade: true, onDelete: "CASCADE" })//cascade delete
     outlets: Outlet[];
 
     constructor() {

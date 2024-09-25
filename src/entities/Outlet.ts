@@ -17,7 +17,7 @@ export class Outlet extends BaseEntity {
 
     @Column()
     contact: string;
-    
+
     @ManyToOne(() => Business_account, business_account => business_account.outlets)
     @JoinColumn({
         name: "business_id"

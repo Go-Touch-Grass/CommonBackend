@@ -431,3 +431,45 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
     }
 
 }
+
+export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;  // Get user from JWT token
+        const { password } = req.body;
+
+        const businessAccount = await Business_account.findOne({
+            where: { business_id: userId },
+            relations: ['business', 'outlets'] //relations for delete
+        });
+        console.log('Business Account found:', businessAccount);  // Log the account found
+
+        if (!businessAccount) {
+            res.status(404).json({ message: 'Account not found' });
+            return;
+        }
+
+        // Confirm the password
+        if (!await bcrypt.compare(password, businessAccount.password)) {
+            res.status(401).json({ message: 'Invalid password' });
+            return;
+        }
+
+        /*
+        // Manually delete related entities before deleting the business account
+        if (businessAccount.business) {
+            await Business_register_business.remove(businessAccount.business);
+        }
+        if (businessAccount.outlets && businessAccount.outlets.length > 0) {
+            await Outlet.remove(businessAccount.outlets);
+        }
+        */
+
+        await Business_account.remove(businessAccount); // delete the business account itself
+        console.log('Account deleted successfully');  // Log success
+
+        res.status(200).json({ message: 'Account deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting account:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
