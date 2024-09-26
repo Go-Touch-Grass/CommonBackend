@@ -4,6 +4,7 @@ import { Business_register_business } from '../entities/Business_register_busine
 import { Outlet } from '../entities/Outlet';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { generateOTP, sendOTPEmail } from '../utils/otp';
 
 export const createAccount = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -30,6 +31,11 @@ export const createAccount = async (req: Request, res: Response): Promise<void> 
         // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Generate OTP and expiration time
+        const otp = generateOTP();
+        const hashedOTP = await bcrypt.hash(otp, 10);  // Hash OTP for security
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);  // OTP valid for 10 minutes
+
 
         const business = Business_account.create({
             firstName,
@@ -37,11 +43,15 @@ export const createAccount = async (req: Request, res: Response): Promise<void> 
             username,
             password: hashedPassword,
             email,
+            otp: hashedOTP,
+            otpExpiresAt
         });
 
 
         await business.save();
 
+        // Send OTP to the user's email
+        await sendOTPEmail(email, otp);
 
         const token = jwt.sign(
             { id: business.business_id, username: business.username, role: business.role },
@@ -65,6 +75,75 @@ export const createAccount = async (req: Request, res: Response): Promise<void> 
         });
     }
 };
+
+export const verifyOTP = async (req: Request, res: Response): Promise<void> => {
+    try {
+
+        const { otp, userId } = req.body;
+
+        const businessAccount = await Business_account.findOne({ where: { business_id: userId } });
+
+        if (!businessAccount) {
+            res.status(404).json({ message: 'Account not found' });
+            return;
+        }
+
+        // Check if the OTP is expired
+        if (businessAccount.otpExpiresAt && businessAccount.otpExpiresAt < new Date()) {
+            res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+            return;
+        }
+
+        // Verify the OTP
+        const isOTPValid = await bcrypt.compare(otp, businessAccount.otp);
+        if (!isOTPValid) {
+            res.status(400).json({ message: 'Invalid OTP' });
+            return;
+        }
+
+        // Clear the OTP and mark account as verified
+        businessAccount.otp = "";
+        businessAccount.otpExpiresAt = null;
+
+        await businessAccount.save();
+
+        res.status(200).json({ message: 'Email verified successfully' });
+    } catch (error) {
+        console.error('Error verifying OTP:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+export const resendOTP = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { userId } = req.body;
+        const businessAccount = await Business_account.findOne({ where: { business_id: userId } });
+
+        if (!businessAccount) {
+            res.status(404).json({ message: 'Account not found' });
+            return;
+        }
+
+        // Generate a new OTP
+        const otp = generateOTP();
+        const hashedOTP = await bcrypt.hash(otp, 10);
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // OTP valid for 10 minutes
+
+        // Update the account with new OTP
+        businessAccount.otp = hashedOTP;
+        businessAccount.otpExpiresAt = otpExpiresAt;
+
+        await businessAccount.save();
+
+        // Send the OTP to the user's email
+        await sendOTPEmail(businessAccount.email, otp);
+
+        res.status(200).json({ message: 'A new OTP has been sent to your email.' });
+    } catch (error) {
+        console.error('Error resending OTP:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 
 
 export const loginAccount = async (req: Request, res: Response): Promise<void> => {
@@ -108,6 +187,9 @@ export const loginAccount = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
+        const isEmailVerified = !business.otp; // If OTP is null or empty, the email is verified
+
+
         const token = jwt.sign(
             { id: business.business_id, username: business.username, role: business.role },
             process.env.JWT_SECRET as string,
@@ -116,7 +198,8 @@ export const loginAccount = async (req: Request, res: Response): Promise<void> =
 
         res.json({
             business,
-            token
+            token,
+            isEmailVerified, //send the verification status to frontend.
         });
 
     } catch (error) {

@@ -1,12 +1,14 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth";
-import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, retrieveProfile, updateProfile, uploadProfileImage } from "../controllers/business";
+import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP } from "../controllers/business";
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
 import { UserRole } from "../entities/abstract/AbstractUser";
 
 const router = express.Router();
 
 router.post("/api/business/account", createAccount);
+router.post("/api/business/verifyOTP", verifyOTP);
+router.post("/api/business/resendOTP", resendOTP);
 router.post("/api/business/login", loginAccount);
 router.post("/api/business/logout", authMiddleware([UserRole.BUSINESS]), logoutAccount);
 

@@ -33,6 +33,13 @@ export class Business_account extends AbstractUser {
     @Column({ nullable: true })
     deletedAt: Date;
 
+    // OTP and OTP expiration
+    @Column({ nullable: true })
+    otp: string;
+
+    @Column({ nullable: true, type: 'timestamp' })
+    otpExpiresAt: Date | null; //allow null
+
     @OneToOne(
         () => Business_register_business,
         business_register_business => business_register_business.business_account,
