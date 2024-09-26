@@ -91,6 +91,12 @@ export const loginAccount = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
+        // Check if the account is soft-deleted
+        if (business.deletedAt) {
+            res.status(403).json({ message: 'This account has been deactivated.' });
+            return;
+        }
+
 
         const isPasswordValid = await bcrypt.compare(password, business.password);
 
@@ -454,7 +460,10 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        /*
+        await Business_account.update(userId, { deletedAt: new Date() }); //set deletedAt to current date for softdelete.
+        //await Business_account.update(userId, { deletedAt: null }); //reactivate account.
+
+        /* Converted to soft delete instead. 
         // Manually delete related entities before deleting the business account
         if (businessAccount.business) {
             await Business_register_business.remove(businessAccount.business);
@@ -462,11 +471,10 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
         if (businessAccount.outlets && businessAccount.outlets.length > 0) {
             await Outlet.remove(businessAccount.outlets);
         }
-        */
 
         await Business_account.remove(businessAccount); // delete the business account itself
         console.log('Account deleted successfully');  // Log success
-
+        */
         res.status(200).json({ message: 'Account deleted successfully' });
     } catch (error) {
         console.error('Error deleting account:', error);

@@ -30,10 +30,13 @@ export class Business_account extends AbstractUser {
     @Column({ nullable: true })
     profileImage: string;
 
+    @Column({ nullable: true })
+    deletedAt: Date;
+
     @OneToOne(
         () => Business_register_business,
         business_register_business => business_register_business.business_account,
-        //{ cascade: true, onDelete: "CASCADE" } //cascade delete, can also set ID to null
+        { cascade: true, onDelete: "CASCADE" } //cascade delete, can also set ID to null
     )
     business: Business_register_business;
 
