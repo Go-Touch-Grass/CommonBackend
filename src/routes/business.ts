@@ -1,8 +1,12 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth";
-import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP } from "../controllers/business";
+
+import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription } from "../controllers/business";
+
+
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
 import { UserRole } from "../entities/abstract/AbstractUser";
+
 
 const router = express.Router();
 
@@ -30,4 +34,10 @@ router.post('/api/business/outlets', authMiddleware([UserRole.BUSINESS]), create
 router.delete('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSINESS]), deleteOutlet);
 
 router.delete('/api/business/account', authMiddleware([UserRole.BUSINESS]), deleteAccount);
+router.get('/api/business/subscription/:username', authMiddleware([UserRole.BUSINESS]), viewSubscription);
+router.put('/api/business/renew_subscription', authMiddleware([UserRole.BUSINESS]), renewSubscription);
+router.post('/api/business/subscription/:username', authMiddleware([UserRole.BUSINESS]), createSubscription);
+router.post('/api/business/outlet/subscription/:username/:outletId', authMiddleware([UserRole.BUSINESS]), createOutletSubscription);
+router.delete('/api/business/end_subscription', authMiddleware([UserRole.BUSINESS]), endSubscription)
+
 export { router as businessRouter };

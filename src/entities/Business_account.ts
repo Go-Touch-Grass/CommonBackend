@@ -2,6 +2,7 @@ import { BaseEntity, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGen
 import { Business_register_business } from "./Business_register_business";
 import { Outlet } from "./Outlet";
 import { AbstractUser, UserRole } from "./abstract/AbstractUser";
+import { Gem_test } from "./Gem_test";
 
 @Entity('business_account')
 export class Business_account extends AbstractUser {
@@ -43,7 +44,9 @@ export class Business_account extends AbstractUser {
     @OneToOne(
         () => Business_register_business,
         business_register_business => business_register_business.business_account,
+
         { cascade: true, onDelete: "CASCADE" } //cascade delete, can also set ID to null
+
     )
     business: Business_register_business;
 
@@ -55,4 +58,9 @@ export class Business_account extends AbstractUser {
         // Automatically set the role to business for any new instance
         this.role = UserRole.BUSINESS;
     }
+
+    @OneToOne(
+        () => Gem_test,
+        gem_test => gem_test.business_account)
+    gem_test: Gem_test;
 }
