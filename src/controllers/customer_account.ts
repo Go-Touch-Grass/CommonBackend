@@ -26,7 +26,7 @@ export const registerCustomer = async (
     res: Response
 ): Promise<void> => {
     try {
-        const { fullName, username, email, password } = req.body;
+        const { fullName, username, email, password, avatar, customization } = req.body;
 
         // Check if username or email is already in use
         const existingUser = await Customer_account.findOne({
@@ -52,6 +52,8 @@ export const registerCustomer = async (
             email,
             password: hashedPassword,
             exp: 0,
+            avatar: avatar || null, 
+            customization: customization || { body: null, shirt: null, pants: null, hat: null }, 
         });
 
         await customer_account.save();
@@ -151,7 +153,7 @@ export const getUserInfo = async (
         const userId = (req as any).user.id;
         const customer_account = await Customer_account.findOne({
             where: { id: userId },
-            select: ["id", "fullName", "username", "email", "exp"],
+            select: ["id", "fullName", "username", "email", "exp", "avatar", "customization"],
         });
 
         if (!customer_account) {
@@ -190,7 +192,7 @@ export const editProfile = async (
 ): Promise<void> => {
     try {
         const userId = (req as any).user.id;
-        const { fullName, username, email } = req.body;
+        const { fullName, username, email, avatar, customization } = req.body;
 
         const customer_account = await Customer_account.findOne({
             where: { id: userId },
@@ -234,6 +236,14 @@ export const editProfile = async (
 
         if (fullName) {
             customer_account.fullName = fullName;
+        }
+
+        if (avatar) {
+            customer_account.avatar = avatar;
+        }
+
+        if (customization) {
+            customer_account.customization = customization;
         }
 
         await customer_account.save();
