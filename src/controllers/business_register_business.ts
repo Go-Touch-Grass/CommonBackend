@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { Business_register_business } from '../entities/Business_register_business';
 import { Business_account } from '../entities/Business_account';
 

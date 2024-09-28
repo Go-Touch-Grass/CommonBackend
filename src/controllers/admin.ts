@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Admin } from '../entities/Admin';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { Business_account } from '../entities/Business_account';
 import { Business_register_business, statusEnum } from '../entities/Business_register_business';
 import { Customer_account } from '../entities/Customer_account';

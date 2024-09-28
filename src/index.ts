@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import express from "express";
 import path from 'path';
 import { Admin } from "./entities/Admin";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { Business } from "./entities/Business";
 import { Customer_account } from "./entities/Customer_account";
 import { adminRouter } from "./routes/admin";

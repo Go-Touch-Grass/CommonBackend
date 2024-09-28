@@ -46,14 +46,7 @@ export class Customer_account extends AbstractUser {
     })
     role: UserRole = UserRole.CUSTOMER;
 
-    @Column({ nullable: true })
-    avatar: string;
+    @Column({ nullable: true})
+    avatarUrl: string;
 
-    @Column({ type: 'json', nullable: true })
-    customization: {
-        body: string;
-        shirt: string;
-        pants: string;
-        hat: string;
-  };
 }

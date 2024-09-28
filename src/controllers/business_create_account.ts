@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Business_account } from '../entities/Business_account';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 export const createAccount = async (req: Request, res: Response): Promise<void> => {
     try {
