@@ -1,7 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth";
 
-import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription } from "../controllers/business";
+import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription } from "../controllers/business";
 
 
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
@@ -39,5 +39,6 @@ router.put('/api/business/renew_subscription', authMiddleware([UserRole.BUSINESS
 router.post('/api/business/subscription/:username', authMiddleware([UserRole.BUSINESS]), createSubscription);
 router.post('/api/business/outlet/subscription/:username/:outletId', authMiddleware([UserRole.BUSINESS]), createOutletSubscription);
 router.delete('/api/business/end_subscription', authMiddleware([UserRole.BUSINESS]), endSubscription)
+router.put('/api/business/update_subscription/:subscriptionId', authMiddleware([UserRole.BUSINESS]), editSubscription)
 
 export { router as businessRouter };

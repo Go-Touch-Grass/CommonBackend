@@ -6,6 +6,91 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { generateOTP, sendOTPEmail } from '../utils/otp';
 import { BusinessAccountSubscription } from '../entities/Business_account_subscription';
+import { getRepository } from 'typeorm';
+
+export const editSubscription = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { username } = req.params; // Assuming username is passed in params
+        const { subscriptionId, duration, distance_coverage } = req.body;
+
+        // Pricing structure
+        const pricing = {
+            base: {
+                1: { price: 50, gems: 500 },
+                2: { price: 90, gems: 900 },
+                3: { price: 120, gems: 1200 },
+            },
+            extra: {
+                1: { price: 10, gems: 100 },
+                2: { price: 18, gems: 180 },
+                3: { price: 25, gems: 250 },
+            },
+        };
+
+        // Fetch current subscription
+        const currentSubscription = await BusinessAccountSubscription.findOne({
+            where: { subscription_id: subscriptionId },
+            relations: ['business_register_business'],
+        });
+
+        if (!currentSubscription) {
+            res.status(404).json({ status: 404, message: 'Subscription not found' });
+            return;
+        }
+
+        // Check if attempting to downgrade
+        if (duration < currentSubscription.duration || distance_coverage < currentSubscription.distance_coverage) {
+            res.status(400).json({ status: 400, message: 'Downgrading is not allowed' });
+            return;
+        }
+
+        // Calculate total gems needed
+        const total_gem = pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0);
+
+        // Fetch business account
+        const businessAccount = await Business_account.findOne({
+            where: { username },
+            relations: ['business', 'gem_test'],
+        });
+
+        if (!businessAccount) {
+            res.status(404).json({ status: 404, message: 'Business account not found' });
+            return;
+        }
+
+        const gemAccount = businessAccount.gem_test;
+
+        // Check gem balance
+        if (gemAccount.balance < total_gem) {
+            res.status(400).json({ status: 400, message: 'Not enough gems in the account' });
+            return;
+        }
+
+        // Deduct gems
+        gemAccount.balance -= total_gem;
+        await gemAccount.save();
+
+        // Update subscription details
+        currentSubscription.duration = duration;
+        currentSubscription.distance_coverage = distance_coverage;
+        currentSubscription.total_cost = pricing.base[duration].price + (pricing.extra[distance_coverage]?.price || 0);
+        currentSubscription.total_gem = total_gem;
+        currentSubscription.title = `${duration} Month Plan`;
+        currentSubscription.description = `Subscription for ${duration} month(s) with ${distance_coverage} km coverage.`;
+
+        // Save the updated subscription
+        const savedSubscription = await currentSubscription.save();
+        console.log('Updated Subscription:', savedSubscription); // Log the updated subscription
+
+        // Respond with the updated subscription
+        res.status(200).json(savedSubscription);
+    } catch (error) {
+        console.error('Error editing subscription:', error);
+        res.status(500).json({ status: 500, message: 'Internal Server Error', error: (error as Error).message });
+    }
+};
+
+
 
 export const endSubscription = async (req: Request, res: Response): Promise<void> => {
     try {

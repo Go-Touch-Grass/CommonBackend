@@ -15,23 +15,23 @@ export class Gem_test extends BaseEntity {
     })
     business_account: Business_account;
 
-    // Method to top up gems
+
     async topUp(amount: number) {
         try {
-            // Ensure the amount is a valid number
+
             if (typeof amount !== 'number' || amount <= 0) {
                 throw new Error('Amount must be a positive number');
             }
-    
-            // Ensure balance is treated as a number
-            const currentBalance = parseFloat(this.balance.toString()); // Convert balance to number if it's a string
-            const newBalance = currentBalance + amount; // Add the amount to the balance
-    
-            // Update the balance with two decimal places
+
+
+            const currentBalance = parseFloat(this.balance.toString());
+            const newBalance = currentBalance + amount;
+
+
             this.balance = parseFloat(newBalance.toFixed(2));
-            await this.save(); // Save the updated balance
-    
-            return this.balance; // Optionally return the updated balance
+            await this.save();
+
+            return this.balance;
         } catch (error) {
             console.error('Error during top up:', error);
             throw error; // Rethrow the error to be handled elsewhere
