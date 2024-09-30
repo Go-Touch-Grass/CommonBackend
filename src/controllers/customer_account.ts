@@ -3,6 +3,12 @@ import { Customer_account } from "../entities/Customer_account";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
+interface Customization {
+    hat: string | null;       
+    upperWear: string | null; 
+    lowerWear: string | null; 
+}
+
 // Function to calculate total XP required to reach a certain level
 function calculateTotalXpForLevel(level: number): number {
     if (level <= 1) return 0;
@@ -26,7 +32,7 @@ export const registerCustomer = async (
     res: Response
 ): Promise<void> => {
     try {
-        const { fullName, username, email, password } = req.body;
+        const { fullName, username, email, password, avatar, customization } = req.body;
 
         // Check if username or email is already in use
         const existingUser = await Customer_account.findOne({
@@ -46,12 +52,20 @@ export const registerCustomer = async (
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        const defaultCustomization: Customization = {
+            hat: null,
+            upperWear: null,
+            lowerWear: null,
+        };
+
         const customer_account = Customer_account.create({
             fullName,
             username,
             email,
             password: hashedPassword,
             exp: 0,
+            avatar: avatar || null, 
+            customization: customization || defaultCustomization, 
         });
 
         await customer_account.save();
@@ -190,7 +204,7 @@ export const editProfile = async (
 ): Promise<void> => {
     try {
         const userId = (req as any).user.id;
-        const { fullName, username, email } = req.body;
+        const { fullName, username, email, avatar, customization } = req.body;
 
         const customer_account = await Customer_account.findOne({
             where: { id: userId },
@@ -336,5 +350,66 @@ export const changePassword = async (
             status: 500,
             message: "Internal server error",
         });
+    }
+};
+
+//POST
+export const createAvatar = async (req: Request, res: Response) => {
+    
+    const userId = (req as any).user.id; 
+    const { avatar, customization } = req.body;
+
+    try {
+        const profile = await Customer_account.findOne({ where: { id: userId } });
+
+        if (profile) {
+            profile.avatar = avatar;
+            profile.customization = customization;
+            await profile.save();
+            res.status(200).json({ message: 'Avatar and customization saved successfully.' });
+        } else {
+            res.status(404).json({ message: 'User not found.' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error saving avatar.' });
+    }
+};
+
+// PUT /api/avatar/update
+export const updateAvatar = async (req: Request, res: Response) => {
+    
+    const userId = (req as any).user.id; 
+    const { avatar, customization } = req.body;
+
+    try {
+        const profile = await Customer_account.findOne({ where: { id: userId } });
+
+        if (profile) {
+            profile.avatar = avatar;
+            profile.customization = customization;
+            await profile.save();
+            res.status(200).json({ message: 'Avatar updated successfully.' });
+        } else {
+            res.status(404).json({ message: 'User not found.' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating avatar.' });
+    }
+};
+
+// GET /api/avatar
+export const getAvatarDetails = async (req: Request, res: Response) => {
+    
+    const userId = (req as any).user.id; 
+    try {
+        const profile = await Customer_account.findOne({ where: { id: userId } });
+
+        if (profile) {
+            res.status(200).json({ avatar: profile.avatar, customization: profile.customization });
+        } else {
+            res.status(404).json({ message: 'User not found.' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching avatar.' });
     }
 };

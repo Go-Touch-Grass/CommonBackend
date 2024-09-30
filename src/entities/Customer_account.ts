@@ -45,4 +45,10 @@ export class Customer_account extends AbstractUser {
         default: UserRole.CUSTOMER
     })
     role: UserRole = UserRole.CUSTOMER;
+
+    @Column({ nullable: true })
+    avatar: string;
+
+    @Column({ type: 'json', nullable: true })
+    customization: Record<string, any>;
 }
