@@ -50,7 +50,7 @@ export const editSubscription = async (req: Request, res: Response): Promise<voi
         // Fetch business account
         const businessAccount = await Business_account.findOne({
             where: { username },
-            relations: ['business', 'gem_test'],
+            relations: ['business'],
         });
 
         if (!businessAccount) {
@@ -252,7 +252,7 @@ export const createSubscription = async (req: Request, res: Response): Promise<v
 
         const businessAccount = await Business_account.findOne({
             where: { username },
-            relations: ['business', 'gem_test']
+            relations: ['business']
         });
 
         if (!businessAccount) {
@@ -306,7 +306,7 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
 
         const businessAccount = await Business_account.findOne({
             where: { username },
-            relations: ['business', 'gem_test']
+            relations: ['business']
         });
 
 
