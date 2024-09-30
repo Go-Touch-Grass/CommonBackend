@@ -2,7 +2,6 @@ import { BaseEntity, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGen
 import { Business_register_business } from "./Business_register_business";
 import { Outlet } from "./Outlet";
 import { AbstractUser, UserRole } from "./abstract/AbstractUser";
-import { Gem_test } from "./Gem_test";
 
 @Entity('business_account')
 export class Business_account extends AbstractUser {
@@ -59,8 +58,6 @@ export class Business_account extends AbstractUser {
         this.role = UserRole.BUSINESS;
     }
 
-    @OneToOne(
-        () => Gem_test,
-        gem_test => gem_test.business_account)
-    gem_test: Gem_test;
+    @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+    gem_balance: number; // Should not initialize here, default is set to 0
 }

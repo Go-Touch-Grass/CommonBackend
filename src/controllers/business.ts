@@ -58,17 +58,15 @@ export const editSubscription = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        const gemAccount = businessAccount.gem_test;
-
         // Check gem balance
-        if (gemAccount.balance < total_gem) {
+        if (businessAccount.gem_balance < total_gem) {
             res.status(400).json({ status: 400, message: 'Not enough gems in the account' });
             return;
         }
 
         // Deduct gems
-        gemAccount.balance -= total_gem;
-        await gemAccount.save();
+        businessAccount.gem_balance -= total_gem;
+        await businessAccount.save();
 
         // Update subscription details
         currentSubscription.duration = duration;
@@ -260,19 +258,17 @@ export const createSubscription = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        const gemAccount = businessAccount.gem_test;
-
-        console.log('Current gem balance:', gemAccount.balance);
+        console.log('Current gem balance:', businessAccount.gem_balance);
         console.log('Total gems to spend:', total_gem);
 
 
-        if (gemAccount.balance < total_gem) {
+        if (businessAccount.gem_balance < total_gem) {
             res.status(400).json({ status: 400, message: 'Not enough gems in the account' });
             return;
         }
 
-        gemAccount.balance -= total_gem;
-        await gemAccount.save();
+        businessAccount.gem_balance -= total_gem;
+        await businessAccount.save();
 
 
         const businessAccountSubscription = BusinessAccountSubscription.create({
@@ -968,6 +964,37 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
         res.status(200).json({ message: 'Account deleted successfully' });
     } catch (error) {
         console.error('Error deleting account:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const topUpGems = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { amount } = req.body;
+
+        if (!amount || amount <= 0) {
+            res.status(400).json({ message: 'Invalid amount' });
+        }
+
+        const userId = (req as any).user.id;  // Get user from JWT token
+        const businessAccount = await Business_account.findOne({ where: { business_id: userId } });
+
+        if (!businessAccount) {
+            res.status(404).json({ message: 'Account not found' });
+        } else {
+            // Add the top-up amount to the existing balance
+            const currentBalance = parseFloat(businessAccount.gem_balance.toString());
+            const newBalance = currentBalance + amount;
+
+            // Update the balance and save
+            businessAccount.gem_balance = parseFloat(newBalance.toFixed(2));
+            await businessAccount.save();
+
+            // Respond with the updated balance
+            res.status(200).json({ message: 'Gems topped up successfully', balance: businessAccount.gem_balance });
+        }
+    } catch (error) {
+        console.error('Error topping up gems:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };

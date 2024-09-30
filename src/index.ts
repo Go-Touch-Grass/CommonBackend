@@ -17,14 +17,6 @@ import { Business_account } from "./entities/Business_account"; // Add this line
 import { businessRouter } from "./routes/business";
 import { BusinessAccountSubscription } from "./entities/Business_account_subscription";
 
-
-import { Gem_test } from "./entities/Gem_test";
-
-import router from "./routes/gem_test";
-
-
-
-
 dotenv.config();
 
 export const AppDataSource = new DataSource({
@@ -41,7 +33,6 @@ export const AppDataSource = new DataSource({
         Customer_account,
         Outlet,
         BusinessAccountSubscription,
-        Gem_test
     ],
     synchronize: true,
 });
@@ -112,12 +103,6 @@ const main = async () => {
         app.use('/uploads', express.static(path.join('C://GoTouchGrass/uploads', '../uploads'))); // Serve the "uploads" directory
 
         app.use(customerAccountRouter);
-
-
-
-        app.use(router)
-
-
 
         app.listen(8080, () => {
             console.log("Now running on port 8080");
