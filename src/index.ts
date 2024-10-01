@@ -17,6 +17,9 @@ import { Business_account } from "./entities/Business_account"; // Add this line
 import { businessRouter } from "./routes/business";
 import { BusinessAccountSubscription } from "./entities/Business_account_subscription";
 
+import Stripe from 'stripe';
+import { paymentRouter } from "./routes/payment";
+
 dotenv.config();
 
 export const AppDataSource = new DataSource({
@@ -39,6 +42,10 @@ export const AppDataSource = new DataSource({
 
 const app = express();
 //const cors = require("cors");
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+export { stripe };
 
 const main = async () => {
     try {
@@ -103,6 +110,7 @@ const main = async () => {
         app.use('/uploads', express.static(path.join('C://GoTouchGrass/uploads', '../uploads'))); // Serve the "uploads" directory
 
         app.use(customerAccountRouter);
+        app.use(paymentRouter);
 
         app.listen(8080, () => {
             console.log("Now running on port 8080");
