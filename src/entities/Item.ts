@@ -3,7 +3,7 @@ import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 export enum ItemType {
     HAT = 'hat',
     SHIRT = 'shirt',
-    BOTTOMS = 'bottoms'
+    BOTTOM = 'bottom'
 }
 
 @Entity('item')

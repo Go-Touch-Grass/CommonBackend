@@ -93,8 +93,8 @@ const main = async () => {
                 { name: 'Cowboy Hat', type: ItemType.HAT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/cowboy_hat.png' },
                 { name: 'Love Shirt', type: ItemType.SHIRT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/love_shirt.png' },
                 { name: 'White Shirt', type: ItemType.SHIRT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/white_shirt.png' },
-                { name: 'Blue Skirt', type: ItemType.BOTTOMS, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/blue_skirt.png' },
-                { name: 'Purple Pants', type: ItemType.BOTTOMS, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/purple_pants.png' },
+                { name: 'Blue Skirt', type: ItemType.BOTTOM, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/blue_skirt.png' },
+                { name: 'Purple Pants', type: ItemType.BOTTOM, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/purple_pants.png' },
             ];
 
             for (const item of defaultItems) {
