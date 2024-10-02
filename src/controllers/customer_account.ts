@@ -2,12 +2,7 @@ import { Request, Response } from "express";
 import { Customer_account } from "../entities/Customer_account";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-
-interface Customization {
-    hat: string | null;       
-    upperWear: string | null; 
-    lowerWear: string | null; 
-}
+import { Avatar } from "../entities/Avatar";
 
 // Function to calculate total XP required to reach a certain level
 function calculateTotalXpForLevel(level: number): number {
@@ -32,7 +27,7 @@ export const registerCustomer = async (
     res: Response
 ): Promise<void> => {
     try {
-        const { fullName, username, email, password, avatar, customization } = req.body;
+        const { fullName, username, email, password } = req.body;
 
         // Check if username or email is already in use
         const existingUser = await Customer_account.findOne({
@@ -52,20 +47,12 @@ export const registerCustomer = async (
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const defaultCustomization: Customization = {
-            hat: null,
-            upperWear: null,
-            lowerWear: null,
-        };
-
         const customer_account = Customer_account.create({
             fullName,
             username,
             email,
             password: hashedPassword,
             exp: 0,
-            avatar: avatar || null, 
-            customization: customization || defaultCustomization, 
         });
 
         await customer_account.save();
@@ -204,7 +191,7 @@ export const editProfile = async (
 ): Promise<void> => {
     try {
         const userId = (req as any).user.id;
-        const { fullName, username, email, avatar, customization } = req.body;
+        const { fullName, username, email } = req.body;
 
         const customer_account = await Customer_account.findOne({
             where: { id: userId },
@@ -353,4 +340,48 @@ export const changePassword = async (
     }
 };
 
+export const updateCustomerAvatar = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+        const { avatarId } = req.body;
 
+        const customer_account = await Customer_account.findOne({
+            where: { id: userId },
+        });
+
+        if (!customer_account) {
+            res.status(404).json({
+                status: 404,
+                message: "User not found",
+            });
+            return;
+        }
+
+        const avatar = await Avatar.findOne({ where: { id: avatarId } });
+
+        if (!avatar) {
+            res.status(404).json({
+                status: 404,
+                message: "Avatar not found",
+            });
+            return;
+        }
+
+        customer_account.avatar = avatar;
+        await customer_account.save();
+
+        res.status(200).json({
+            status: 200,
+            message: "Customer avatar updated successfully",
+        });
+    } catch (error) {
+        console.error("Error updating customer avatar:", error);
+        res.status(500).json({
+            status: 500,
+            message: "Internal server error",
+        });
+    }
+};

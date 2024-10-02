@@ -23,6 +23,7 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
 export const getItems = async (req: Request, res: Response): Promise<void> => {
     try {
         const items = await Item.find();
+        console.log('Fetched items:', items); // Add this line for debugging
         res.json(items);
     } catch (error) {
         console.error('Error fetching items:', error);

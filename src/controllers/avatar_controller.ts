@@ -6,17 +6,15 @@ import { Item } from '../entities/Item';
 
 export const createAvatar = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { avatarType, customerId, businessId, hatId, shirtId, bottomId } = req.body;
+        const { avatarType, hatId, shirtId, bottomId } = req.body;
+        const userId = (req as any).user.id; // Get user ID from authenticated request
+
+        const customer = await Customer_account.findOneOrFail({ where: { id: userId } });
 
         const avatar = Avatar.create({
             avatarType,
+            customer,
         });
-
-        if (customerId) {
-            avatar.customer = await Customer_account.findOneOrFail({ where: { id: customerId } });
-        } else if (businessId) {
-            avatar.business = await Business_account.findOneOrFail({ where: { business_id: businessId } });
-        }
 
         if (hatId) avatar.hat = await Item.findOneOrFail({ where: { id: hatId } });
         if (shirtId) avatar.shirt = await Item.findOneOrFail({ where: { id: shirtId } });
@@ -24,7 +22,11 @@ export const createAvatar = async (req: Request, res: Response): Promise<void> =
 
         await avatar.save();
 
-        res.status(201).json(avatar);
+        // Update the customer's avatar
+        customer.avatar = avatar;
+        await customer.save();
+
+        res.status(201).json({ avatar, avatarId: avatar.id });
     } catch (error) {
         console.error('Error creating avatar:', error);
         res.status(500).json({ message: 'Internal server error' });

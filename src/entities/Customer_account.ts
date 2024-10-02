@@ -48,7 +48,7 @@ export class Customer_account extends AbstractUser {
     })
     role: UserRole = UserRole.CUSTOMER;
 
-    @OneToOne(() => Avatar, avatar => avatar.customer)
+    @OneToOne(() => Avatar, avatar => avatar.customer, { cascade: true })
     @JoinColumn()
     avatar: Avatar;
 }
