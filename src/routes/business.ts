@@ -1,27 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth";
 
-import { 
-    createAccount, 
-    createOutlet, 
-    deleteAccount, 
-    deleteOutlet, 
-    loginAccount, 
-    logoutAccount, 
-    registerBusiness, 
-    resendOTP, 
-    retrieveProfile, 
-    updateProfile, 
-    uploadProfileImage, 
-    verifyOTP, 
-    viewSubscription, 
-    renewSubscription, 
-    createSubscription, 
-    createOutletSubscription, 
-    endSubscription, 
-    editSubscription,
-    topUpGems,
-} from "../controllers/business";
+import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, topUpGems } from "../controllers/business";
 
 
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
@@ -53,8 +33,8 @@ router.post("/api/business/registerBusiness", proofBusinessUpload.single('proof'
 router.post('/api/business/outlets', authMiddleware([UserRole.BUSINESS]), createOutlet);
 router.delete('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSINESS]), deleteOutlet);
 
-//router.post("/api/business/create_voucher", authMiddleware([UserRole.BUSINESS]), createVoucher);
-//router.get("/api/business/get_all_voucher", authMiddleware([UserRole.BUSINESS]), getAllVoucher);
+router.post("/api/business/create_voucher", authMiddleware([UserRole.BUSINESS]), createVoucher);
+router.get("/api/business/get_all_voucher", authMiddleware([UserRole.BUSINESS]), getAllVoucher);
 
 router.delete('/api/business/account', authMiddleware([UserRole.BUSINESS]), deleteAccount);
 router.get('/api/business/subscription/:username', authMiddleware([UserRole.BUSINESS]), viewSubscription);
@@ -63,7 +43,5 @@ router.post('/api/business/subscription/:username', authMiddleware([UserRole.BUS
 router.post('/api/business/outlet/subscription/:username/:outletId', authMiddleware([UserRole.BUSINESS]), createOutletSubscription);
 router.delete('/api/business/end_subscription', authMiddleware([UserRole.BUSINESS]), endSubscription)
 router.put('/api/business/update_subscription/:subscriptionId', authMiddleware([UserRole.BUSINESS]), editSubscription)
-
 router.post('/api/business/top_up_gems', authMiddleware([UserRole.BUSINESS]), topUpGems);
-
-    export { router as businessRouter };
+export { router as businessRouter };
