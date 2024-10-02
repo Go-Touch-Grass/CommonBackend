@@ -8,6 +8,7 @@ import { generateOTP, sendOTPEmail, sendSubscriptionRenewEmail } from '../utils/
 import { BusinessAccountSubscription } from '../entities/Business_account_subscription';
 import { getRepository } from 'typeorm';
 import { Between } from 'typeorm';
+import { Business_voucher } from '../entities/Business_voucher';
 
 
 export const editSubscription = async (req: Request, res: Response): Promise<void> => {
@@ -977,6 +978,56 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
     }
 
 }
+
+export const createVoucher = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { name, description, price, discount, business_id, outlet_id } = req.body;
+        const username = (req as any).user.username;
+
+        const businessAccount = await Business_account.findOne({ where: { username }, relations: ['business', 'outlets'] });
+        if (!businessAccount) {
+            res.status(404).json({ message: 'Business account not found' });
+            return;
+        }
+
+        // Create a new voucher listing
+        const newVoucher = Business_voucher.create({
+            name,
+            description,
+            price,
+            discount,
+        });
+
+        // If business_id is provided, associate with main business
+        if (business_id) {
+            const business = await Business_register_business.findOne({ where: { registration_id: business_id } });
+            if (!business) {
+                res.status(404).json({ message: 'Business not found' });
+                return;
+            }
+            newVoucher.business_register_business = business;
+        }
+
+        // If outlet_id is provided, associate with outlet
+        if (outlet_id) {
+            const outlet = await Outlet.findOne({ where: { outlet_id } });
+            if (!outlet) {
+                res.status(404).json({ message: 'Outlet not found' });
+                return;
+            }
+            newVoucher.outlet = outlet;
+        }
+
+        // Save the voucher
+        await newVoucher.save();
+        res.status(201).json({ message: 'Voucher created successfully', voucher: newVoucher });
+
+    } catch (error) {
+        console.error('Error creating voucher:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 
 export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
     try {
