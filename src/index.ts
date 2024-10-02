@@ -4,23 +4,22 @@ import express from "express";
 import path from 'path';
 import { Admin } from "./entities/Admin";
 import bcrypt from "bcrypt";
-import { Business } from "./entities/Business";
+
 import { Customer_account } from "./entities/Customer_account";
 import { adminRouter } from "./routes/admin";
-// import { businessRouter } from "./routes/business";
+
 import { customerAccountRouter } from "./routes/customer_account_router";
 import { Business_register_business } from "./entities/Business_register_business";
 
-import { businessLoginAccountRouter } from "./routes/business_login_account";
-import { businessLogoutAccountRouter } from "./routes/business_logout_account";
 import { Outlet } from "./entities/Outlet";
 import { Business_account } from "./entities/Business_account"; // Add this line
-import { businessRegisterBusinessRouter } from "./routes/business_register_business";
-import { businessCreateAccountRouter } from "./routes/business_create_account";
-import { businessRetrieveAccountRouter } from "./routes/business_retrieve_profile";
-import { businessEditAccountRouter } from "./routes/business_edit_profile";
-import { businessCreateOutletRouter } from "./routes/business_create_outlet";
 
+import { businessRouter } from "./routes/business";
+import { BusinessAccountSubscription } from "./entities/Business_account_subscription";
+
+import Stripe from 'stripe';
+import { paymentRouter } from "./routes/payment";
+import { Business_transaction } from "./entities/Business_transaction";
 
 dotenv.config();
 
@@ -37,12 +36,18 @@ export const AppDataSource = new DataSource({
         Business_register_business,
         Customer_account,
         Outlet,
+        BusinessAccountSubscription,
+        Business_transaction,
     ],
     synchronize: true,
 });
 
 const app = express();
 //const cors = require("cors");
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+export { stripe };
 
 const main = async () => {
     try {
@@ -101,20 +106,13 @@ const main = async () => {
 
         app.use(express.json());
         app.use(adminRouter);
-        // app.use(businessRouter);
+        app.use(businessRouter);
 
         // Serve static files from the uploads folder
         app.use('/uploads', express.static(path.join('C://GoTouchGrass/uploads', '../uploads'))); // Serve the "uploads" directory
 
-
-        app.use(businessCreateAccountRouter);
-        app.use(businessRegisterBusinessRouter);
         app.use(customerAccountRouter);
-        app.use(businessLoginAccountRouter);
-        app.use(businessLogoutAccountRouter);
-        app.use(businessRetrieveAccountRouter);
-        app.use(businessEditAccountRouter);
-        app.use(businessCreateOutletRouter);
+        app.use(paymentRouter);
 
         app.listen(8080, () => {
             console.log("Now running on port 8080");
