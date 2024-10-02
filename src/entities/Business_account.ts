@@ -1,6 +1,7 @@
 import { BaseEntity, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Business_register_business } from "./Business_register_business";
 import { Outlet } from "./Outlet";
+import { Avatar } from "./Avatar";
 
 @Entity('business_account')
 export class Business_account extends BaseEntity {
@@ -34,4 +35,7 @@ export class Business_account extends BaseEntity {
 
     @OneToMany(() => Outlet, outlet => outlet.business)
     outlets: Outlet[];
+
+    @OneToMany(() => Avatar, avatar => avatar.business)
+    avatars: Avatar[];
 }

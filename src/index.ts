@@ -20,7 +20,10 @@ import { businessCreateAccountRouter } from "./routes/business_create_account";
 import { businessRetrieveAccountRouter } from "./routes/business_retrieve_profile";
 import { businessEditAccountRouter } from "./routes/business_edit_profile";
 import { businessCreateOutletRouter } from "./routes/business_create_outlet";
-
+import { Item, ItemType } from "./entities/Item";
+import { Avatar } from "./entities/Avatar";
+import { itemRouter } from "./routes/item_router";
+import { avatarRouter } from "./routes/avatar_router";
 
 dotenv.config();
 
@@ -37,6 +40,8 @@ export const AppDataSource = new DataSource({
         Business_register_business,
         Customer_account,
         Outlet,
+        Item,
+        Avatar
     ],
     synchronize: true,
 });
@@ -75,6 +80,34 @@ const main = async () => {
             .catch((error) =>
                 console.log("Error during Data Source initialization", error)
             );
+
+        const initializeDefaultItems = async () => {
+            const itemRepository = AppDataSource.getRepository(Item);
+
+            const defaultItems = [
+                { name: 'Baseball Cap', type: ItemType.HAT, filepath: 'assets/sprites/baseball_cap.png' },
+                { name: 'Cowboy Hat', type: ItemType.HAT, filepath: 'assets/sprites/cowboy_hat.png' },
+                { name: 'Love Shirt', type: ItemType.SHIRT, filepath: 'assets/sprites/love_shirt.png' },
+                { name: 'White Shirt', type: ItemType.SHIRT, filepath: 'assets/sprites/white_shirt.png' },
+                { name: 'Blue Skirt', type: ItemType.BOTTOMS, filepath: 'assets/sprites/blue_skirt.png' },
+                { name: 'Purple Pants', type: ItemType.BOTTOMS, filepath: 'assets/sprites/purple_pants.png' },
+            ];
+
+            for (const item of defaultItems) {
+                const existingItem = await itemRepository.findOne({ where: { name: item.name } });
+                if (!existingItem) {
+                    const newItem = itemRepository.create(item);
+                    await itemRepository.save(newItem);
+                    console.log(`Created default item: ${item.name}`);
+                } else {
+                    console.log(`Default item already exists: ${item.name}`);
+                }
+            }
+        };
+
+        await initializeDefaultItems();
+        console.log("Default items initialized");
+
         const cors = require("cors");
         const allowedOrigins = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"];
         app.use(
@@ -115,6 +148,9 @@ const main = async () => {
         app.use(businessRetrieveAccountRouter);
         app.use(businessEditAccountRouter);
         app.use(businessCreateOutletRouter);
+
+        app.use(itemRouter);
+        app.use(avatarRouter);
 
         app.listen(8080, () => {
             console.log("Now running on port 8080");

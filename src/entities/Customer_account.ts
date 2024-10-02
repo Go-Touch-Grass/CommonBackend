@@ -2,12 +2,14 @@ import {
     Column,
     Entity,
     OneToOne,
+    OneToMany,
     JoinColumn,
     PrimaryGeneratedColumn,
     CreateDateColumn,
     UpdateDateColumn,
 } from "typeorm";
 import { AbstractUser, UserRole } from './abstract/AbstractUser';
+import { Avatar } from "./Avatar";
 
 @Entity("Customer_account")
 export class Customer_account extends AbstractUser {
@@ -46,9 +48,7 @@ export class Customer_account extends AbstractUser {
     })
     role: UserRole = UserRole.CUSTOMER;
 
-    @Column({ nullable: true })
-    avatar: string;
-
-    @Column({ type: 'json', nullable: true })
-    customization: Record<string, any>;
+    @OneToOne(() => Avatar, avatar => avatar.customer)
+    @JoinColumn()
+    avatar: Avatar;
 }
