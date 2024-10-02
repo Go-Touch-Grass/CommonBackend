@@ -6,96 +6,13 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { generateOTP, sendOTPEmail, sendSubscriptionRenewEmail } from '../utils/otp';
 import { BusinessAccountSubscription } from '../entities/Business_account_subscription';
-import { addMonths } from 'date-fns'; // Import a helper function for date manipulation
-import { Between, getRepository } from 'typeorm';
+import { getRepository } from 'typeorm';
+import { Between } from 'typeorm';
 import { Business_voucher } from '../entities/Business_voucher';
 
-export const editSubscription = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { username } = req.params; // Assuming username is passed in params
-        const { subscriptionId, duration, distance_coverage } = req.body;
 
-        // Pricing structure
-        const pricing = {
-            base: {
-                1: { price: 50, gems: 500 },
-                2: { price: 90, gems: 900 },
-                3: { price: 120, gems: 1200 },
-            },
-            extra: {
-                1: { price: 10, gems: 100 },
-                2: { price: 18, gems: 180 },
-                3: { price: 25, gems: 250 },
-            },
-        };
-
-        // Fetch current subscription
-        const currentSubscription = await BusinessAccountSubscription.findOne({
-            where: { subscription_id: subscriptionId },
-            relations: ['business_register_business'],
-        });
-
-        if (!currentSubscription) {
-            res.status(404).json({ status: 404, message: 'Subscription not found' });
-            return;
-        }
-
-        // Check if attempting to downgrade
-        if (duration < currentSubscription.duration || distance_coverage < currentSubscription.distance_coverage) {
-            res.status(400).json({ status: 400, message: 'Downgrading is not allowed' });
-            return;
-        }
-
-        // Calculate total gems needed
-        const total_gem = pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0);
-
-        // Fetch business account
-        const businessAccount = await Business_account.findOne({
-            where: { username },
-            relations: ['business'],
-        });
-
-        if (!businessAccount) {
-            res.status(404).json({ status: 404, message: 'Business account not found' });
-            return;
-        }
-
-        // Check gem balance
-        if (businessAccount.gem_balance < total_gem) {
-            res.status(400).json({ status: 400, message: 'Not enough gems in the account' });
-            return;
-        }
-
-        // Deduct gems
-        businessAccount.gem_balance -= total_gem;
-        await businessAccount.save();
-
-        // Update subscription details
-        currentSubscription.duration = duration;
-        currentSubscription.distance_coverage = distance_coverage;
-        currentSubscription.total_cost = pricing.base[duration].price + (pricing.extra[distance_coverage]?.price || 0);
-        currentSubscription.total_gem = total_gem;
-        currentSubscription.title = `${duration} Month Plan`;
-        currentSubscription.description = `Subscription for ${duration} month(s) with ${distance_coverage} km coverage.`;
-
-        // Update the expiration date
-        currentSubscription.expiration_date = addMonths(new Date(currentSubscription.activation_date), duration);
-
-        // Save the updated subscription
-        const savedSubscription = await currentSubscription.save();
-        console.log('Updated Subscription:', savedSubscription); // Log the updated subscription
-
-        // Respond with the updated subscription
-        res.status(200).json(savedSubscription);
-    } catch (error) {
-        console.error('Error editing subscription:', error);
-        res.status(500).json({ status: 500, message: 'Internal Server Error', error: (error as Error).message });
-    }
-};
-
-
-
-
+export const editSubscription = async (req: Request, res: Response): Promise<void> => { };
+export const createSubscription = async (req: Request, res: Response): Promise<void> => { };
 
 export const endSubscription = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -148,7 +65,9 @@ export const createOutletSubscription = async (req: Request, res: Response): Pro
         const { username, outletId } = req.params;
         const { duration, distance_coverage, total_cost, total_gem, title, description } = req.body;
 
+
         console.log('Incoming request data:', { username, outletId, duration, distance_coverage, total_cost, total_gem, title, description });
+
 
         const businessAccount = await Business_account.findOne({
             where: { username },
@@ -159,6 +78,7 @@ export const createOutletSubscription = async (req: Request, res: Response): Pro
             res.status(404).json({ status: 404, message: 'Business account not found' });
             return;
         }
+
 
         const outlet = await Outlet.findOne({
             where: { outlet_id: parseInt(outletId, 10) }
@@ -172,10 +92,14 @@ export const createOutletSubscription = async (req: Request, res: Response): Pro
         const business = businessAccount.business;
 
         const activationDate = new Date();
+
+
         let expirationDate = new Date(activationDate);
         expirationDate.setMonth(activationDate.getMonth() + duration);
 
+
         if (expirationDate.getDate() !== activationDate.getDate()) {
+
             expirationDate.setDate(0);
         }
 
@@ -183,38 +107,13 @@ export const createOutletSubscription = async (req: Request, res: Response): Pro
         console.log('Activation Date:', activationDate);
         console.log('Final Expiration Date:', expirationDate);
 
-        // Calculate total gems needed
-        const pricing = {
-            base: {
-                1: { gems: 500 }, // Adjust based on your logic
-                2: { gems: 900 },
-                3: { gems: 1200 },
-            },
-            extra: {
-                1: { gems: 100 },
-                2: { gems: 180 },
-                3: { gems: 250 },
-            },
-        };
-        const totalGemsRequired = pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0) * duration;
 
-        console.log('Current gem balance:', businessAccount.gem_balance);
-        console.log('Total gems required:', totalGemsRequired);
-
-        if (businessAccount.gem_balance < totalGemsRequired) {
-            res.status(400).json({ status: 400, message: 'Not enough gems in the account' });
-            return;
-        }
-
-        // Deduct gems from balance
-        businessAccount.gem_balance -= totalGemsRequired;
-        await businessAccount.save();
 
         const businessAccountSubscription = BusinessAccountSubscription.create({
             duration,
             distance_coverage,
             total_cost,
-            total_gem: totalGemsRequired,
+            total_gem,
             title,
             description,
             activation_date: activationDate,
@@ -225,6 +124,7 @@ export const createOutletSubscription = async (req: Request, res: Response): Pro
 
         await businessAccountSubscription.save();
 
+
         const formattedActivationDate = activationDate.toLocaleDateString('en-US');
         const formattedExpirationDate = expirationDate.toLocaleDateString('en-US');
 
@@ -234,11 +134,11 @@ export const createOutletSubscription = async (req: Request, res: Response): Pro
                 duration,
                 distance_coverage,
                 total_cost,
-                total_gem: totalGemsRequired,
+                total_gem,
                 title,
                 description,
-                activation_date: formattedActivationDate,
-                expiration_date: formattedExpirationDate,
+                activation_date: formattedActivationDate, // Send formatted date
+                expiration_date: formattedExpirationDate, // Send formatted date
                 business_register_business: business,
                 outlet: outlet
             }
@@ -250,69 +150,7 @@ export const createOutletSubscription = async (req: Request, res: Response): Pro
 };
 
 
-export const createSubscription = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { username } = req.params;
-        const { duration, distance_coverage } = req.body;
 
-
-        const pricing = {
-            base: {
-                1: { price: 50, gems: 500 },
-                2: { price: 90, gems: 900 },
-                3: { price: 120, gems: 1200 },
-            },
-            extra: {
-                1: { price: 10, gems: 100 },
-                2: { price: 18, gems: 180 },
-                3: { price: 25, gems: 250 },
-            },
-        };
-
-
-        const total_gem = parseInt(pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0) * duration);
-
-        const businessAccount = await Business_account.findOne({
-            where: { username },
-            relations: ['business']
-        });
-
-        if (!businessAccount) {
-            res.status(404).json({ status: 404, message: 'Business account not found' });
-            return;
-        }
-
-        console.log('Current gem balance:', businessAccount.gem_balance);
-        console.log('Total gems to spend:', total_gem);
-
-
-        if (businessAccount.gem_balance < total_gem) {
-            res.status(400).json({ status: 400, message: 'Not enough gems in the account' });
-            return;
-        }
-
-        businessAccount.gem_balance -= total_gem;
-        await businessAccount.save();
-
-
-        const businessAccountSubscription = BusinessAccountSubscription.create({
-            duration,
-            distance_coverage,
-            total_cost: pricing.base[duration].price + (pricing.extra[distance_coverage]?.price || 0) * duration,
-            total_gem,
-            title: `${duration} Month Plan`,
-            description: `Subscription for ${duration} month(s) with ${distance_coverage} km coverage.`,
-            business_register_business: businessAccount.business // Use the correct property name
-        });
-
-        await businessAccountSubscription.save();
-
-        res.status(201).json(businessAccountSubscription);
-    } catch (error) {
-        console.error('Error creating subscription:', error);
-        res.status(500).json({ status: 500, message: 'Internal Server Error', error: error.message });
-    }
-};
 
 export const checkExpiringSubscription = async (): Promise<void> => {
 
@@ -327,7 +165,7 @@ export const checkExpiringSubscription = async (): Promise<void> => {
     eightDaysFromNow.setDate(today.getDate() + 8); // Create a 1-day range for timezone differences
     */
 
-    // Get the date exactly 7 days from now (time set to 00:00:00) to disregard the time and only compare by date.
+    // Get the date exactly 7 days from now (time set to 00:00:00) to disregard the time and only compare by date. 
     const oneWeekFromNow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7)
     // Create a date for 8 days from now to provide a range (time set to 23:59:59 for the end of the day)
     const eightDaysFromNow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8);
@@ -340,7 +178,7 @@ export const checkExpiringSubscription = async (): Promise<void> => {
         const expiringSubscriptions = await BusinessAccountSubscription.find({
             where: {
                 //expiration_date: Between(oneWeekFromNow, eightDaysFromNow), //1 week from expiry, only send once.
-                expiration_date: Between(todayStart, oneWeekFromNow), // Check if expiration is within the 1-week range, continuosly send within the range
+                expiration_date: Between(todayStart, oneWeekFromNow), // Check if expiration is within the 1-week range, continuosly send within the range 
                 status: 'active' // Only send emails for active subscriptions
             },
             relations: ['business_register_business', 'business_register_business.business_account'] // Load related business for email
@@ -361,22 +199,21 @@ export const checkExpiringSubscription = async (): Promise<void> => {
     } catch (error) {
         console.error("Error checking expiring subscriptions:", error);
     }
-
 }
-
-
 
 export const renewSubscription = async (req: Request, res: Response): Promise<void> => {
     try {
         const { username, outlet_id, duration, distance_coverage } = req.body;
 
+
         console.log('Request body:', req.body);
 
-        // Step 1: Find the business account
+
         const businessAccount = await Business_account.findOne({
             where: { username },
             relations: ['business']
         });
+
 
         if (!businessAccount) {
             console.log(`Business account with username "${username}" not found.`);
@@ -386,7 +223,7 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
 
         console.log('Found business account:', businessAccount);
 
-        // Step 2: Find the existing subscription by outlet ID (or main subscription)
+        // Find the existing subscription by outlet ID (or main subscription)
         const existingSubscription = await BusinessAccountSubscription.findOne({
             where: {
                 business_register_business: businessAccount.business,
@@ -394,6 +231,7 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
             },
             relations: ['business_register_business']
         });
+
 
         if (!existingSubscription) {
             console.log(`No existing subscription found for outlet_id: ${outlet_id} and business: ${businessAccount.business}`);
@@ -403,46 +241,25 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
 
         console.log('Found existing subscription:', existingSubscription);
 
-        // Pricing structure
-        const pricing = {
-            base: {
-                1: { price: 50, gems: 500 },
-                2: { price: 90, gems: 900 },
-                3: { price: 120, gems: 1200 },
-            },
-            extra: {
-                1: { price: 10, gems: 100 },
-                2: { price: 18, gems: 180 },
-                3: { price: 25, gems: 250 },
-            },
-        };
 
-        // Step 3: Calculate total gems required for renewal
-        const total_gem = pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0);
-
-        // Step 4: Check if the business account has enough gems
-        if (businessAccount.gem_balance < total_gem) {
-            res.status(400).json({ status: 400, message: 'Not enough gems in the account to renew subscription' });
-            return;
-        }
-
-        // Step 5: Deduct gems from the business account
-        businessAccount.gem_balance -= total_gem;
-        await businessAccount.save(); // Save the updated balance
-
-        // Step 6: Update subscription details
         const currentDate = new Date();
         const newExpirationDate = new Date(currentDate);
-        newExpirationDate.setMonth(currentDate.getMonth() + duration); // Extend expiration by the new duration
+
+
+        newExpirationDate.setMonth(currentDate.getMonth() + duration);
+
 
         existingSubscription.activation_date = currentDate;
         existingSubscription.expiration_date = newExpirationDate;
         existingSubscription.duration = duration;
         existingSubscription.distance_coverage = distance_coverage;
 
-        await existingSubscription.save(); // Save the updated subscription
+
+        await existingSubscription.save();
+
 
         console.log('Subscription successfully renewed:', existingSubscription);
+
 
         res.status(200).json({
             status: 200,
@@ -454,6 +271,7 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
         res.status(500).json({ status: 500, message: 'Internal Server Error', error: error.message });
     }
 };
+
 
 
 export const viewSubscription = async (req: Request, res: Response): Promise<void> => {
@@ -884,7 +702,6 @@ export const uploadProfileImage = async (req: Request, res: Response): Promise<v
     }
 }
 
-
 // For registering their business after the creation of account 
 export const registerBusiness = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -1066,20 +883,21 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
 
 export const getAllVoucher = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { business_id, outlet_id } = req.query;
-
+        const { registration_id, outlet_id } = req.query;
+        console.log('Received registration_id:', registration_id);
+        console.log('Received outlet_id:', outlet_id);
         let vouchers;
 
-        if (business_id) {
+        if (registration_id) {
             // Fetch vouchers for the main business
             // Convert business_id to a number
-            const businessIdNum = parseInt(business_id as string, 10);
-            if (isNaN(businessIdNum)) {
-                res.status(400).json({ message: 'Invalid business_id' });
+            const registrationIdNum = parseInt(registration_id as string, 10);
+            if (isNaN(registrationIdNum)) {
+                res.status(400).json({ message: 'Invalid registration_id' });
                 return;
             }
 
-            const business = await Business_register_business.findOne({ where: { registration_id: businessIdNum } });
+            const business = await Business_register_business.findOne({ where: { registration_id: registrationIdNum } });
             if (!business) {
                 res.status(404).json({ message: 'Business not found' });
                 return;
@@ -1121,7 +939,6 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
         res.status(500).json({ message: 'Internal server error' });
     }
 };
-
 
 export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
     try {
