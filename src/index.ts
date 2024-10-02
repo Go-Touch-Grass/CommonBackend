@@ -109,7 +109,8 @@ const main = async () => {
         app.use(businessRouter);
 
         // Serve static files from the uploads folder
-        app.use('/uploads', express.static(path.join('C://GoTouchGrass/uploads', '../uploads'))); // Serve the "uploads" directory
+        const uploadsPath = path.join(__dirname, '../uploads'); // For relative path
+        app.use('/uploads', express.static(uploadsPath));
 
         app.use(customerAccountRouter);
         app.use(paymentRouter);
