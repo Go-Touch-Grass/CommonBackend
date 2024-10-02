@@ -77,3 +77,24 @@ export const updateAvatar = async (req: Request, res: Response): Promise<void> =
         res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+export const getAvatarByCustomerId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { customerId } = req.params;
+        
+        const avatar = await Avatar.findOne({
+            where: { customer: { id: parseInt(customerId) } },
+            relations: ['customer', 'hat', 'shirt', 'bottom']
+        });
+
+        if (!avatar) {
+            res.status(404).json({ message: 'Avatar not found for this customer' });
+            return;
+        }
+
+        res.json(avatar);
+    } catch (error) {
+        console.error('Error fetching avatar by customer ID:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
