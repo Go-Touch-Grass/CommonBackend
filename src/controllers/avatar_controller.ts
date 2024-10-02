@@ -9,22 +9,33 @@ export const createAvatar = async (req: Request, res: Response): Promise<void> =
         const { avatarType, hatId, shirtId, bottomId } = req.body;
         const userId = (req as any).user.id; // Get user ID from authenticated request
 
-        const customer = await Customer_account.findOneOrFail({ where: { id: userId } });
+        let avatar: Avatar;
 
-        const avatar = Avatar.create({
-            avatarType,
-            customer,
-        });
+        if (avatarType === AvatarType.TOURIST) {
+            const customer = await Customer_account.findOneOrFail({ where: { id: userId } });
+            avatar = Avatar.create({
+                avatarType,
+                customer,
+            });
+            // Update the customer's avatar
+            customer.avatar = avatar;
+            await customer.save();
+        } else if (avatarType === AvatarType.BUSINESS) {
+            const business = await Business_account.findOneOrFail({ where: { business_id: userId } });
+            avatar = Avatar.create({
+                avatarType,
+                business,
+            });
+        } else {
+            res.status(400).json({ message: 'Invalid avatar type' });
+            return;
+        }
 
         if (hatId) avatar.hat = await Item.findOneOrFail({ where: { id: hatId } });
         if (shirtId) avatar.shirt = await Item.findOneOrFail({ where: { id: shirtId } });
         if (bottomId) avatar.bottom = await Item.findOneOrFail({ where: { id: bottomId } });
 
         await avatar.save();
-
-        // Update the customer's avatar
-        customer.avatar = avatar;
-        await customer.save();
 
         res.status(201).json({ avatar, avatarId: avatar.id });
     } catch (error) {
@@ -95,6 +106,35 @@ export const getAvatarByCustomerId = async (req: Request, res: Response): Promis
         res.json(avatar);
     } catch (error) {
         console.error('Error fetching avatar by customer ID:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const getAvatarsByBusinessUsername = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { username } = req.params;
+
+        // Find the business account by username
+        const business = await Business_account.findOne({ where: { username } });
+
+        if (!business) {
+            res.status(404).json({ message: 'Business not found' });
+            return;
+        }
+
+        const avatars = await Avatar.find({
+            where: { business: { business_id: business.business_id } },
+            relations: ['business', 'hat', 'shirt', 'bottom']
+        });
+
+        if (!avatars || avatars.length === 0) {
+            res.status(404).json({ message: 'No avatars found for this business' });
+            return;
+        }
+
+        res.json(avatars);
+    } catch (error) {
+        console.error('Error fetching avatars by business username:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
