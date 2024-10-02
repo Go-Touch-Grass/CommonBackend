@@ -142,6 +142,35 @@ export const reviewOnePendingBusinessRegistration = async (req: Request, res: Re
     }
 }
 
+export const getBusinessTransactionsByBusinessId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { business_id } = req.params;
+        const id = parseInt(business_id);
+        const business = await Business_account.findOne({
+            where: { business_id: id },
+            relations: ['transactions']  // Ensure transactions are loaded
+        });
+
+        if (!business) {
+            res.status(400).json({
+                status: 400,
+                message: 'Business not found'
+            });
+            return;
+        }
+
+        const businessTransactions = await business.transactions;
+
+        res.status(200).json(businessTransactions);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to fetch business transactions'
+        });
+    }
+}
+
 // Customer-related business logic below
 
 export const getAllCustomers = async (req: Request, res: Response): Promise<void> => {
