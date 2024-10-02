@@ -3,6 +3,7 @@ import { Business_register_business } from "./Business_register_business";
 import { Outlet } from "./Outlet";
 import { AbstractUser, UserRole } from "./abstract/AbstractUser";
 import { Business_transaction } from "./Business_transaction";
+import { Avatar } from "./Avatar";
 
 @Entity('business_account')
 export class Business_account extends AbstractUser {
@@ -64,4 +65,7 @@ export class Business_account extends AbstractUser {
 
     @OneToMany(() => Business_transaction, business_transaction => business_transaction.business_account, { cascade: true, onDelete: "CASCADE" })
     transactions: Business_transaction[];
+
+    @OneToMany(() => Avatar, avatar => avatar.business)
+    avatars: Avatar[];
 }
