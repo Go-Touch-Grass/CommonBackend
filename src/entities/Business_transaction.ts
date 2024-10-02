@@ -6,13 +6,13 @@ export class Business_transaction extends BaseEntity {
     @PrimaryGeneratedColumn()
     transaction_id: number;
 
-    @Column({ nullable: true })
+    @Column({ type: 'decimal', nullable: true, precision: 10, scale: 2 })
     currency_amount: number;
 
-    @Column({ nullable: true })
+    @Column({ type: 'int', nullable: true })
     gems_added: number;
 
-    @Column({ nullable: true })
+    @Column({ type: 'int', nullable: true })
     gems_deducted: number;
 
     @CreateDateColumn()

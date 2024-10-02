@@ -59,7 +59,7 @@ export class Business_account extends AbstractUser {
         this.role = UserRole.BUSINESS;
     }
 
-    @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+    @Column({ type: 'int', default: 0 })
     gem_balance: number; // Should not initialize here, default is set to 0
 
     @OneToMany(() => Business_transaction, business_transaction => business_transaction.business_account, { cascade: true, onDelete: "CASCADE" })
