@@ -13,13 +13,15 @@ import { Business_register_business } from "./entities/Business_register_busines
 
 import { Outlet } from "./entities/Outlet";
 import { Business_account } from "./entities/Business_account"; // Add this line
-
 import { businessRouter } from "./routes/business";
 import { BusinessAccountSubscription } from "./entities/Business_account_subscription";
-
 import Stripe from 'stripe';
 import { paymentRouter } from "./routes/payment";
 import { Business_transaction } from "./entities/Business_transaction";
+import { Item, ItemType } from "./entities/Item";
+import { Avatar } from "./entities/Avatar";
+import { itemRouter } from "./routes/item_router";
+import { avatarRouter } from "./routes/avatar_router";
 
 dotenv.config();
 
@@ -38,6 +40,8 @@ export const AppDataSource = new DataSource({
         Outlet,
         BusinessAccountSubscription,
         Business_transaction,
+        Item,
+        Avatar
     ],
     synchronize: true,
 });
@@ -80,6 +84,34 @@ const main = async () => {
             .catch((error) =>
                 console.log("Error during Data Source initialization", error)
             );
+
+        const initializeDefaultItems = async () => {
+            const itemRepository = AppDataSource.getRepository(Item);
+
+            const defaultItems = [
+                { name: 'Baseball Cap', type: ItemType.HAT, filepath: 'assets/sprites/baseball_cap.png' },
+                { name: 'Cowboy Hat', type: ItemType.HAT, filepath: 'assets/sprites/cowboy_hat.png' },
+                { name: 'Love Shirt', type: ItemType.SHIRT, filepath: 'assets/sprites/love_shirt.png' },
+                { name: 'White Shirt', type: ItemType.SHIRT, filepath: 'assets/sprites/white_shirt.png' },
+                { name: 'Blue Skirt', type: ItemType.BOTTOMS, filepath: 'assets/sprites/blue_skirt.png' },
+                { name: 'Purple Pants', type: ItemType.BOTTOMS, filepath: 'assets/sprites/purple_pants.png' },
+            ];
+
+            for (const item of defaultItems) {
+                const existingItem = await itemRepository.findOne({ where: { name: item.name } });
+                if (!existingItem) {
+                    const newItem = itemRepository.create(item);
+                    await itemRepository.save(newItem);
+                    console.log(`Created default item: ${item.name}`);
+                } else {
+                    console.log(`Default item already exists: ${item.name}`);
+                }
+            }
+        };
+
+        await initializeDefaultItems();
+        console.log("Default items initialized");
+
         const cors = require("cors");
         const allowedOrigins = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"];
         app.use(
@@ -110,9 +142,12 @@ const main = async () => {
 
         // Serve static files from the uploads folder
         app.use('/uploads', express.static(path.join('C://GoTouchGrass/uploads', '../uploads'))); // Serve the "uploads" directory
-
+        app.use('/assets', express.static(path.join(__dirname, 'assets', 'sprites')));
         app.use(customerAccountRouter);
         app.use(paymentRouter);
+
+        app.use(itemRouter);
+        app.use(avatarRouter);
 
         app.listen(8080, () => {
             console.log("Now running on port 8080");

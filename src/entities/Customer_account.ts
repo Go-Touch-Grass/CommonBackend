@@ -2,12 +2,14 @@ import {
     Column,
     Entity,
     OneToOne,
+    OneToMany,
     JoinColumn,
     PrimaryGeneratedColumn,
     CreateDateColumn,
     UpdateDateColumn,
 } from "typeorm";
 import { AbstractUser, UserRole } from './abstract/AbstractUser';
+import { Avatar } from "./Avatar";
 
 @Entity("Customer_account")
 export class Customer_account extends AbstractUser {
@@ -45,4 +47,8 @@ export class Customer_account extends AbstractUser {
         default: UserRole.CUSTOMER
     })
     role: UserRole = UserRole.CUSTOMER;
+
+    @OneToOne(() => Avatar, avatar => avatar.customer, { cascade: true })
+    @JoinColumn()
+    avatar: Avatar;
 }
