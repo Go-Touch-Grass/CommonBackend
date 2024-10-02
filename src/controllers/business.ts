@@ -940,6 +940,97 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
     }
 };
 
+
+export const getVoucher = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { listing_id } = req.params;
+        console.log('Received listing_id:', listing_id);
+
+        const voucherIdNum = parseInt(listing_id, 10);
+        if (isNaN(voucherIdNum)) {
+            res.status(400).json({ message: 'Invalid listing_id' });
+            return;
+        }
+
+        const voucher = await Business_voucher.findOne({
+            where: { listing_id: voucherIdNum },
+            relations: ['business_register_business', 'outlet'],
+        });
+
+        if (!voucher) {
+            res.status(404).json({ message: 'Voucher not found' });
+            return;
+        }
+
+        res.status(200).json({ voucher });
+    } catch (error) {
+        console.error('Error fetching voucher:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const editVoucher = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { listing_id } = req.params;
+        const updatedData = req.body; // Ensure you're sending the correct fields from the frontend
+
+        const voucherIdNum = parseInt(listing_id, 10);
+        if (isNaN(voucherIdNum)) {
+            res.status(400).json({ message: 'Invalid listing_id' });
+            return;
+        }
+
+        const voucher = await Business_voucher.findOne({ where: { listing_id: voucherIdNum } });
+        if (!voucher) {
+            res.status(404).json({ message: 'Voucher not found' });
+            return;
+        }
+
+        // Update voucher fields based on the provided data
+        voucher.name = updatedData.name;
+        voucher.description = updatedData.description;
+        voucher.price = updatedData.price;
+        voucher.discount = updatedData.discount;
+        voucher.voucherImage = updatedData.voucherImage;
+
+        await voucher.save();
+
+        res.status(200).json({ message: 'Voucher updated successfully', voucher });
+    } catch (error) {
+        console.error('Error updating voucher:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+
+export const deleteVoucher = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { listing_id } = req.params;
+
+        const voucherIdNum = parseInt(listing_id, 10);
+        if (isNaN(voucherIdNum)) {
+            res.status(400).json({ message: 'Invalid listing_id' });
+            return;
+        }
+
+        // Find the voucher by listing_id
+        const voucher = await Business_voucher.findOne({ where: { listing_id: voucherIdNum } });
+        if (!voucher) {
+            res.status(404).json({ message: 'Voucher not found' });
+            return;
+        }
+
+        // Delete the voucher
+        await voucher.remove();
+
+        res.status(200).json({ message: 'Voucher deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting voucher:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+
 export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = (req as any).user.id;  // Get user from JWT token
