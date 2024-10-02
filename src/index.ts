@@ -85,12 +85,12 @@ const main = async () => {
             const itemRepository = AppDataSource.getRepository(Item);
 
             const defaultItems = [
-                { name: 'Baseball Cap', type: ItemType.HAT, filepath: 'assets/sprites/baseball_cap.png' },
-                { name: 'Cowboy Hat', type: ItemType.HAT, filepath: 'assets/sprites/cowboy_hat.png' },
-                { name: 'Love Shirt', type: ItemType.SHIRT, filepath: 'assets/sprites/love_shirt.png' },
-                { name: 'White Shirt', type: ItemType.SHIRT, filepath: 'assets/sprites/white_shirt.png' },
-                { name: 'Blue Skirt', type: ItemType.BOTTOMS, filepath: 'assets/sprites/blue_skirt.png' },
-                { name: 'Purple Pants', type: ItemType.BOTTOMS, filepath: 'assets/sprites/purple_pants.png' },
+                { name: 'Baseball Cap', type: ItemType.HAT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/baseball_cap.png' },
+                { name: 'Cowboy Hat', type: ItemType.HAT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/cowboy_hat.png' },
+                { name: 'Love Shirt', type: ItemType.SHIRT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/love_shirt.png' },
+                { name: 'White Shirt', type: ItemType.SHIRT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/white_shirt.png' },
+                { name: 'Blue Skirt', type: ItemType.BOTTOMS, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/blue_skirt.png' },
+                { name: 'Purple Pants', type: ItemType.BOTTOMS, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/purple_pants.png' },
             ];
 
             for (const item of defaultItems) {
@@ -138,7 +138,7 @@ const main = async () => {
 
         // Serve static files from the uploads folder
         app.use('/uploads', express.static(path.join('C://GoTouchGrass/uploads', '../uploads'))); // Serve the "uploads" directory
-        app.use('/assets', express.static(path.join(__dirname, 'assets', 'sprites')));
+        //app.use('/assets', express.static(path.join(__dirname, 'assets', 'sprites')));
 
         app.use(businessCreateAccountRouter);
         app.use(businessRegisterBusinessRouter);
