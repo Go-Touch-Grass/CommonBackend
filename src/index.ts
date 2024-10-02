@@ -17,10 +17,11 @@ import { Business_account } from "./entities/Business_account"; // Add this line
 import { businessRouter } from "./routes/business";
 import { BusinessAccountSubscription } from "./entities/Business_account_subscription";
 
-
+import './jobs/subscriptionReminderJob';
 import { Gem_test } from "./entities/Gem_test";
 
 import router from "./routes/gem_test";
+
 
 
 
@@ -76,6 +77,7 @@ const main = async () => {
                 } else {
                     console.log("Admin user already exists");
                 }
+
             })
             .catch((error) =>
                 console.log("Error during Data Source initialization", error)

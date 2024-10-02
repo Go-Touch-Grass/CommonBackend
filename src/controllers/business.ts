@@ -4,9 +4,11 @@ import { Business_register_business } from '../entities/Business_register_busine
 import { Outlet } from '../entities/Outlet';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { generateOTP, sendOTPEmail } from '../utils/otp';
+import { generateOTP, sendOTPEmail, sendSubscriptionRenewEmail } from '../utils/otp';
 import { BusinessAccountSubscription } from '../entities/Business_account_subscription';
 import { getRepository } from 'typeorm';
+import { Between } from 'typeorm';
+
 
 export const editSubscription = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -294,7 +296,55 @@ export const createSubscription = async (req: Request, res: Response): Promise<v
     }
 };
 
+export const checkExpiringSubscription = async (): Promise<void> => {
 
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const lastThreeDays = new Date();
+
+    /*
+    const oneWeekFromNow = new Date(); //assuming Now is current date before expiration
+    const eightDaysFromNow = new Date(today);
+    oneWeekFromNow.setDate(today.getDate() + 7);
+    eightDaysFromNow.setDate(today.getDate() + 8); // Create a 1-day range for timezone differences
+    */
+
+    // Get the date exactly 7 days from now (time set to 00:00:00) to disregard the time and only compare by date. 
+    const oneWeekFromNow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7)
+    // Create a date for 8 days from now to provide a range (time set to 23:59:59 for the end of the day)
+    const eightDaysFromNow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8);
+    eightDaysFromNow.setHours(23, 59, 59, 999); // Set time to the end of the day
+
+    //lastThreeDays.setDate(today.getDate() + 3);
+
+    try {
+        // Find subscriptions expiring within the next week
+        const expiringSubscriptions = await BusinessAccountSubscription.find({
+            where: {
+                //expiration_date: Between(oneWeekFromNow, eightDaysFromNow), //1 week from expiry, only send once.
+                expiration_date: Between(todayStart, oneWeekFromNow), // Check if expiration is within the 1-week range, continuosly send within the range 
+                status: 'active' // Only send emails for active subscriptions
+            },
+            relations: ['business_register_business', 'business_register_business.business_account'] // Load related business for email
+        });
+
+        for (const subscription of expiringSubscriptions) {
+            const business = subscription.business_register_business.business_account;
+            //console.log("business:", business);
+            //console.log("expiring subscription:", subscription.title);
+
+            if (business && business.email) {
+                // Send renewal email
+                //console.log(`Sending renewal email to ${business.email}`);
+                await sendSubscriptionRenewEmail(business.email);
+                console.log(`Sent renewal email to ${business.email}`);
+            }
+        }
+    } catch (error) {
+        console.error("Error checking expiring subscriptions:", error);
+    }
+
+}
 
 export const renewSubscription = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -318,7 +368,7 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
 
         console.log('Found business account:', businessAccount);
 
-        // Step 2: Find the existing subscription by outlet ID (or main subscription)
+        // Find the existing subscription by outlet ID (or main subscription)
         const existingSubscription = await BusinessAccountSubscription.findOne({
             where: {
                 business_register_business: businessAccount.business,
