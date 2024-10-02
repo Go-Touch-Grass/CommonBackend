@@ -1,7 +1,7 @@
 import { DataSource } from "typeorm";
 import * as dotenv from "dotenv";
 import express from "express";
-import path from 'path';
+import path from "path";
 import { Admin } from "./entities/Admin";
 import bcrypt from "bcrypt";
 import { Business } from "./entities/Business";
@@ -20,76 +20,82 @@ import { businessCreateAccountRouter } from "./routes/business_create_account";
 import { businessRetrieveAccountRouter } from "./routes/business_retrieve_profile";
 import { businessEditAccountRouter } from "./routes/business_edit_profile";
 import { businessCreateOutletRouter } from "./routes/business_create_outlet";
-
+import { businessRegisterAvatarRouter } from "./routes/business_register_avatar";
+import { Business_avatar_request } from "./entities/Business_register_avatar";
 
 dotenv.config();
 
 export const AppDataSource = new DataSource({
-    type: "postgres",
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT),
-    username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
-    entities: [
-        Admin,
-        Business_account,
-        Business_register_business,
-        Customer_account,
-        Outlet,
-    ],
-    synchronize: true,
+  type: "postgres",
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  username: process.env.DB_USERNAME,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  entities: [
+    Admin,
+    Business_account,
+    Business_register_business,
+    Customer_account,
+    Outlet,
+    Business_avatar_request,
+  ],
+  synchronize: true,
 });
 
 const app = express();
 //const cors = require("cors");
 
 const main = async () => {
-    try {
-        await AppDataSource.initialize()
-            .then(async () => {
-                const adminRepository = AppDataSource.getRepository(Admin);
+  try {
+    await AppDataSource.initialize()
+      .then(async () => {
+        const adminRepository = AppDataSource.getRepository(Admin);
 
-                // Check if admin user already exists
-                const existingAdmin = await adminRepository.findOneBy({
-                    username: "admin",
-                });
+        // Check if admin user already exists
+        const existingAdmin = await adminRepository.findOneBy({
+          username: "admin",
+        });
 
-                if (!existingAdmin) {
-                    const password = 'password';
-                    const hashedPassword = await bcrypt.hash(password, 10);
+        if (!existingAdmin) {
+          const password = "password";
+          const hashedPassword = await bcrypt.hash(password, 10);
 
-                    const admin = adminRepository.create({
-                        username: 'admin',
-                        password: hashedPassword,
-                        name: 'admin',
-                        role: 'admin'
-                    });
+          const admin = adminRepository.create({
+            username: "admin",
+            password: hashedPassword,
+            name: "admin",
+            role: "admin",
+          });
 
-                    await adminRepository.save(admin);
-                    console.log("Admin user created");
-                } else {
-                    console.log("Admin user already exists");
-                }
-            })
-            .catch((error) =>
-                console.log("Error during Data Source initialization", error)
-            );
-        const cors = require("cors");
-        const allowedOrigins = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"];
-        app.use(
-            cors({
-                origin: function (origin, callback) {
-                    // If origin is in the allowed origins list or if it's undefined (like in some local testing environments)
-                    if (!origin || allowedOrigins.includes(origin)) {
-                        callback(null, true);
-                    } else {
-                        callback(new Error("Not allowed by CORS"));
-                    }
-                },
-            })
-        );
-        /*
+          await adminRepository.save(admin);
+          console.log("Admin user created");
+        } else {
+          console.log("Admin user already exists");
+        }
+      })
+      .catch((error) =>
+        console.log("Error during Data Source initialization", error)
+      );
+    const cors = require("cors");
+    const allowedOrigins = [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:3002",
+    ];
+    app.use(
+      cors({
+        origin: function (origin, callback) {
+          // If origin is in the allowed origins list or if it's undefined (like in some local testing environments)
+          if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error("Not allowed by CORS"));
+          }
+        },
+      })
+    );
+    /*
         app.use(
             cors({
                 origin: "http://localhost:3000",
@@ -97,32 +103,35 @@ const main = async () => {
         );
         */
 
-        console.log("Connected to Postgres");
+    console.log("Connected to Postgres");
 
-        app.use(express.json());
-        app.use(adminRouter);
-        // app.use(businessRouter);
+    app.use(express.json());
+    app.use(adminRouter);
+    // app.use(businessRouter);
 
-        // Serve static files from the uploads folder
-        app.use('/uploads', express.static(path.join('C://GoTouchGrass/uploads', '../uploads'))); // Serve the "uploads" directory
+    // Serve static files from the uploads folder
+    app.use(
+      "/uploads",
+      express.static(path.join("C://GoTouchGrass/uploads", "../uploads"))
+    ); // Serve the "uploads" directory
 
+    app.use(businessCreateAccountRouter);
+    app.use(businessRegisterBusinessRouter);
+    app.use(customerAccountRouter);
+    app.use(businessLoginAccountRouter);
+    app.use(businessLogoutAccountRouter);
+    app.use(businessRetrieveAccountRouter);
+    app.use(businessEditAccountRouter);
+    app.use(businessCreateOutletRouter);
+    app.use(businessRegisterAvatarRouter);
 
-        app.use(businessCreateAccountRouter);
-        app.use(businessRegisterBusinessRouter);
-        app.use(customerAccountRouter);
-        app.use(businessLoginAccountRouter);
-        app.use(businessLogoutAccountRouter);
-        app.use(businessRetrieveAccountRouter);
-        app.use(businessEditAccountRouter);
-        app.use(businessCreateOutletRouter);
-
-        app.listen(8080, () => {
-            console.log("Now running on port 8080");
-        });
-    } catch (error) {
-        console.error(error);
-        throw new Error("Unable to connect to db");
-    }
+    app.listen(8080, () => {
+      console.log("Now running on port 8080");
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("Unable to connect to db");
+  }
 };
 
 main();
