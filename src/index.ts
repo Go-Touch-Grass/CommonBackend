@@ -21,7 +21,7 @@ import './jobs/subscriptionReminderJob';
 import { Gem_test } from "./entities/Gem_test";
 
 import router from "./routes/gem_test";
-
+import { Business_voucher } from "./entities/Business_voucher";
 
 
 
@@ -39,6 +39,7 @@ export const AppDataSource = new DataSource({
         Admin,
         Business_account,
         Business_register_business,
+        Business_voucher,
         Customer_account,
         Outlet,
         BusinessAccountSubscription,

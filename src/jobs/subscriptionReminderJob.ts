@@ -5,7 +5,7 @@ import { checkExpiringSubscription } from "../controllers/business"; // Adjust t
 // * * * * *: checks every minute for demo
 // */5 * * * *: checks every 5 minute for demo
 // adjust to adjust email sending frequency
-cron.schedule('* * * * *', async () => {
+cron.schedule('*/3 * * * *', async () => {
     try {
         console.log('Running subscription expiry check every minute for demo...');
         console.log('Email sent every minute for demo... ');

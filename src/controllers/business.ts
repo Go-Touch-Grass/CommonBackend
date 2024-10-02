@@ -848,7 +848,6 @@ export const uploadProfileImage = async (req: Request, res: Response): Promise<v
     }
 }
 
-
 // For registering their business after the creation of account 
 export const registerBusiness = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -1028,6 +1027,63 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
     }
 };
 
+export const getAllVoucher = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { business_id, outlet_id } = req.query;
+
+        let vouchers;
+
+        if (business_id) {
+            // Fetch vouchers for the main business
+            // Convert business_id to a number
+            const businessIdNum = parseInt(business_id as string, 10);
+            if (isNaN(businessIdNum)) {
+                res.status(400).json({ message: 'Invalid business_id' });
+                return;
+            }
+
+            const business = await Business_register_business.findOne({ where: { registration_id: businessIdNum } });
+            if (!business) {
+                res.status(404).json({ message: 'Business not found' });
+                return;
+            }
+            vouchers = await Business_voucher.find({
+                where: { business_register_business: business },
+                relations: ['business_register_business']
+            });
+
+        } else if (outlet_id) {
+            // Fetch vouchers for the specific outlet
+            // Convert outlet_id to a number
+            const outletIdNum = parseInt(outlet_id as string, 10);
+            if (isNaN(outletIdNum)) {
+                res.status(400).json({ message: 'Invalid outlet_id' });
+                return;
+            }
+            const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
+            if (!outlet) {
+                res.status(404).json({ message: 'Outlet not found' });
+                return;
+            }
+            vouchers = await Business_voucher.find({ where: { outlet: outlet }, relations: ['outlet'] });
+        } else {
+            res.status(400).json({ message: 'Please provide either business_id or outlet_id' });
+            return;
+        }
+
+        // If no vouchers are found
+        if (!vouchers || vouchers.length === 0) {
+            res.status(404).json({ message: 'No vouchers found' });
+            return;
+        }
+
+        // Respond with the vouchers
+        res.status(200).json({ vouchers });
+    } catch (error) {
+        console.error('Error fetching vouchers:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
 
 export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
     try {
