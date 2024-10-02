@@ -1,8 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth";
 
-import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, getVoucher, editVoucher, deleteVoucher } from "../controllers/business";
-
+import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, getVoucher, editVoucher, deleteVoucher, searchVouchers } from "../controllers/business";
 
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
 import { UserRole } from "../entities/abstract/AbstractUser";
@@ -41,6 +40,7 @@ router.get("/api/business/vouchers/:listing_id", authMiddleware([UserRole.BUSINE
 router.put("/api/business/vouchers/:listing_id", authMiddleware([UserRole.BUSINESS]), editVoucher);
 
 router.delete('/api/business/vouchers/:listing_id', authMiddleware([UserRole.BUSINESS]), deleteVoucher);
+router.get("/api/business/vouchers/search", authMiddleware([UserRole.BUSINESS]), searchVouchers);
 
 
 router.delete('/api/business/account', authMiddleware([UserRole.BUSINESS]), deleteAccount);

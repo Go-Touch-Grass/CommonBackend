@@ -9,7 +9,7 @@ import { BusinessAccountSubscription } from '../entities/Business_account_subscr
 import { getRepository } from 'typeorm';
 import { Between } from 'typeorm';
 import { Business_voucher } from '../entities/Business_voucher';
-
+import { IsNull } from 'typeorm';
 
 export const editSubscription = async (req: Request, res: Response): Promise<void> => { };
 export const createSubscription = async (req: Request, res: Response): Promise<void> => { };
@@ -884,8 +884,8 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
 export const getAllVoucher = async (req: Request, res: Response): Promise<void> => {
     try {
         const { registration_id, outlet_id } = req.query;
-        console.log('Received registration_id:', registration_id);
-        console.log('Received outlet_id:', outlet_id);
+        //console.log('Received registration_id:', registration_id);
+        //console.log('Received outlet_id:', outlet_id);
         let vouchers;
 
         if (registration_id) {
@@ -903,7 +903,7 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
                 return;
             }
             vouchers = await Business_voucher.find({
-                where: { business_register_business: business },
+                where: { business_register_business: business, outlet: IsNull() },
                 relations: ['business_register_business']
             });
 
@@ -1030,6 +1030,43 @@ export const deleteVoucher = async (req: Request, res: Response): Promise<void> 
     }
 };
 
+
+export const searchVouchers = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { registration_id, outlet_id, searchTerm } = req.query;
+
+        let vouchers;
+        const query = Business_voucher.createQueryBuilder('voucher');
+
+        if (searchTerm) {
+            query.andWhere('(voucher.name ILIKE :search OR voucher.description ILIKE :search)', {
+                search: `%${searchTerm}%`
+            });
+        }
+
+        if (registration_id) {
+            query.andWhere('voucher.business_register_business = :registration_id', { registration_id });
+        }
+
+        if (outlet_id) {
+            query.andWhere('voucher.outlet = :outlet_id', { outlet_id });
+        }
+
+        vouchers = await query.getMany();
+
+        if (vouchers.length === 0) {
+            res.status(404).json({ message: 'No vouchers found' });
+            return;
+        }
+
+        res.status(200).json({ vouchers });
+        return;
+    } catch (error) {
+        console.error('Error fetching vouchers:', error);
+        res.status(500).json({ message: 'Internal server error' });
+        return;
+    }
+};
 
 export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
     try {
