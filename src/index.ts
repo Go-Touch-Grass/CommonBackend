@@ -148,7 +148,6 @@ const main = async () => {
         app.use(businessRetrieveAccountRouter);
         app.use(businessEditAccountRouter);
         app.use(businessCreateOutletRouter);
-
         app.use(itemRouter);
         app.use(avatarRouter);
 
