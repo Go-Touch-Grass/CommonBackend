@@ -2,6 +2,7 @@ import { BaseEntity, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGen
 import { Business_register_business } from "./Business_register_business";
 import { Outlet } from "./Outlet";
 import { AbstractUser, UserRole } from "./abstract/AbstractUser";
+import { Business_transaction } from "./Business_transaction";
 
 @Entity('business_account')
 export class Business_account extends AbstractUser {
@@ -60,4 +61,7 @@ export class Business_account extends AbstractUser {
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
     gem_balance: number; // Should not initialize here, default is set to 0
+
+    @OneToMany(() => Business_transaction, business_transaction => business_transaction.business_account, { cascade: true, onDelete: "CASCADE" })
+    transactions: Business_transaction[];
 }

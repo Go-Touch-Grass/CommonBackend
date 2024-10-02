@@ -19,6 +19,7 @@ import { BusinessAccountSubscription } from "./entities/Business_account_subscri
 
 import Stripe from 'stripe';
 import { paymentRouter } from "./routes/payment";
+import { Business_transaction } from "./entities/Business_transaction";
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ export const AppDataSource = new DataSource({
         Customer_account,
         Outlet,
         BusinessAccountSubscription,
+        Business_transaction,
     ],
     synchronize: true,
 });

@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { generateOTP, sendOTPEmail } from '../utils/otp';
 import { BusinessAccountSubscription } from '../entities/Business_account_subscription';
-import { getRepository } from 'typeorm';
+import { Business_transaction } from '../entities/Business_transaction';
 
 export const editSubscription = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -970,10 +970,14 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
 
 export const topUpGems = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { amount } = req.body;
+        const { currency_cents: currencyCents, gems_added: gemsAdded } = req.body;
 
-        if (!amount || amount <= 0) {
-            res.status(400).json({ message: 'Invalid amount' });
+        if (!currencyCents || currencyCents <= 0) {
+            res.status(400).json({ message: 'Invalid currency amount' });
+        }
+
+        if (!gemsAdded || gemsAdded <= 0) {
+            res.status(400).json({ message: 'Invalid gem amount' });
         }
 
         const userId = (req as any).user.id;  // Get user from JWT token
@@ -983,12 +987,21 @@ export const topUpGems = async (req: Request, res: Response): Promise<void> => {
             res.status(404).json({ message: 'Account not found' });
         } else {
             // Add the top-up amount to the existing balance
-            const currentBalance = parseFloat(businessAccount.gem_balance.toString());
-            const newBalance = currentBalance + amount;
+            const currentGemBalance = parseFloat(businessAccount.gem_balance.toString());
+            const newGemBalance = currentGemBalance + gemsAdded;
 
             // Update the balance and save
-            businessAccount.gem_balance = parseFloat(newBalance.toFixed(2));
+            businessAccount.gem_balance = parseFloat(newGemBalance.toFixed(2));
             await businessAccount.save();
+
+            const currencyDollars = currencyCents / 100;  // Convert cents to dollars
+
+            const businessTransaction = Business_transaction.create({
+                currency_amount: currencyDollars,
+                gems_added: gemsAdded,
+                business_account: businessAccount
+            });
+            await businessTransaction.save();
 
             // Respond with the updated balance
             res.status(200).json({ message: 'Gems topped up successfully', balance: businessAccount.gem_balance });
