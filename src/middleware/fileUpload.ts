@@ -3,8 +3,9 @@ import path from 'path';
 import fs from 'fs';
 //Multer is a middleware for handling multipart/form-data requests, specifically designed for file uploads in Node.js.
 
-const proofBusinessUploadDir = 'C://GoTouchGrass//uploads//proofOfBusiness';
-const profileImageUploadDir = 'C://GoTouchGrass//uploads//profileImages';
+// Create upload directories relative to the current directory
+const proofBusinessUploadDir = path.join(__dirname, '../uploads/proofOfBusiness');
+const profileImageUploadDir = path.join(__dirname, '../uploads/profileImages');
 
 
 // Ensure the directory exists
