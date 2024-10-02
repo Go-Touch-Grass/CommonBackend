@@ -18,9 +18,8 @@ import { businessRouter } from "./routes/business";
 import { BusinessAccountSubscription } from "./entities/Business_account_subscription";
 
 import './jobs/subscriptionReminderJob';
-import { Gem_test } from "./entities/Gem_test";
 
-import router from "./routes/gem_test";
+
 import { Business_voucher } from "./entities/Business_voucher";
 
 
@@ -43,7 +42,7 @@ export const AppDataSource = new DataSource({
         Customer_account,
         Outlet,
         BusinessAccountSubscription,
-        Gem_test
+
     ],
     synchronize: true,
 });
@@ -118,7 +117,7 @@ const main = async () => {
 
 
 
-        app.use(router)
+
 
 
 
