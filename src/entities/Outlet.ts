@@ -1,6 +1,7 @@
 import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Business_account } from "./Business_account"; // Ensure this path is correct
 import { BusinessAccountSubscription } from "./Business_account_subscription";
+import { Business_voucher } from './Business_voucher';
 
 @Entity('outlet')
 export class Outlet extends BaseEntity {
@@ -30,4 +31,6 @@ export class Outlet extends BaseEntity {
     @OneToMany(() => BusinessAccountSubscription, Business_account_subscription => Business_account_subscription.outlet)
     business_account_subscription: BusinessAccountSubscription[];
 
+    @OneToMany(() => Business_voucher, voucher => voucher.outlet)
+    vouchers: Business_voucher[];
 }

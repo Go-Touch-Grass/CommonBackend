@@ -24,6 +24,14 @@ import { itemRouter } from "./routes/item_router";
 import { avatarRouter } from "./routes/avatar_router";
 import { Customer_transaction } from "./entities/Customer_transaction";
 
+import './jobs/subscriptionReminderJob';
+
+
+import { Business_voucher } from "./entities/Business_voucher";
+
+
+
+
 dotenv.config();
 
 export const AppDataSource = new DataSource({
@@ -37,6 +45,7 @@ export const AppDataSource = new DataSource({
         Admin,
         Business_account,
         Business_register_business,
+        Business_voucher,
         Customer_account,
         Outlet,
         BusinessAccountSubscription,
@@ -44,6 +53,7 @@ export const AppDataSource = new DataSource({
         Item,
         Avatar,
         Customer_transaction,
+
     ],
     synchronize: true,
 });
@@ -82,6 +92,7 @@ const main = async () => {
                 } else {
                     console.log("Admin user already exists");
                 }
+
             })
             .catch((error) =>
                 console.log("Error during Data Source initialization", error)
@@ -151,6 +162,12 @@ const main = async () => {
         app.use(paymentRouter);
         app.use(itemRouter);
         app.use(avatarRouter);
+
+
+
+
+
+
 
         app.listen(8080, () => {
             console.log("Now running on port 8080");

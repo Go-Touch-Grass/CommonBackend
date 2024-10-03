@@ -33,7 +33,7 @@ export class BusinessAccountSubscription extends BaseEntity {
     distance_coverage: number;
 
     @Column({ type: 'int', default: 3 })
-    duration: number;
+    duration: number; //by months
 
     @BeforeInsert()
     setExpirationDateAndCost() {
@@ -60,5 +60,8 @@ export class BusinessAccountSubscription extends BaseEntity {
         name: "outlet_id"
     })
     outlet: Outlet;
-
+    /*
+        if outlet_id is empty: main branch
+        else: is an outlet
+    */
 }

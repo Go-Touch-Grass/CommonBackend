@@ -1,6 +1,7 @@
 import { BaseEntity, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Business_account } from "./Business_account";
 import { BusinessAccountSubscription } from "./Business_account_subscription";
+import { Business_voucher } from './Business_voucher';
 
 //Broadly speaking, there are 5 Retail Industry Areas covering a total of 18 Industry Sectors.
 /*
@@ -68,5 +69,6 @@ export class Business_register_business extends BaseEntity {
     @OneToMany(() => BusinessAccountSubscription, Business_account_subscription => Business_account_subscription.business_register_business)
     business_account_subscription: BusinessAccountSubscription[];
 
-
+    @OneToMany(() => Business_voucher, voucher => voucher.business_register_business)
+    vouchers: Business_voucher[];
 }
