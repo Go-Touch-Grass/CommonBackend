@@ -239,7 +239,7 @@ export const getUserInfo = async (
         const userId = (req as any).user.id;
         const customer_account = await Customer_account.findOne({
             where: { id: userId },
-            select: ["id", "fullName", "username", "email", "exp"],
+            select: ["id", "fullName", "username", "email", "exp", "gem_balance"],
         });
 
         if (!customer_account) {
