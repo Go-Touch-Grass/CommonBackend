@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { Avatar } from "../entities/Avatar";
 import { Customer_transaction } from "../entities/Customer_transaction";
+import { generateOTP, sendOTPEmail } from '../utils/otp';
+
 
 // Function to calculate total XP required to reach a certain level
 function calculateTotalXpForLevel(level: number): number {
@@ -48,12 +50,19 @@ export const registerCustomer = async (
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Generate OTP and expiration time
+        const otp = generateOTP();
+        const hashedOTP = await bcrypt.hash(otp, 10);  // Hash OTP for security
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);  // OTP valid for 10 minutes
+
         const customer_account = Customer_account.create({
             fullName,
             username,
             email,
             password: hashedPassword,
             exp: 0,
+            otp: hashedOTP,
+            otpExpiresAt
         });
 
         await customer_account.save();
@@ -61,6 +70,8 @@ export const registerCustomer = async (
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET is not defined");
         }
+        // Send OTP to the user's email
+        await sendOTPEmail(email, otp);
 
         const token = jwt.sign(
             {
@@ -84,6 +95,78 @@ export const registerCustomer = async (
         });
     }
 };
+
+
+export const verifyOTP = async (req: Request, res: Response): Promise<void> => {
+    try {
+
+        const { otp, userId } = req.body;
+
+        const customerAccount = await Customer_account.findOne({ where: { id: userId } });
+
+        if (!customerAccount) {
+            res.status(404).json({ message: 'Account not found' });
+            return;
+        }
+
+        // Check if the OTP is expired
+        if (customerAccount.otpExpiresAt && customerAccount.otpExpiresAt < new Date()) {
+            res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+            return;
+        }
+
+        // Verify the OTP
+        const isOTPValid = await bcrypt.compare(otp, customerAccount.otp);
+        if (!isOTPValid) {
+            res.status(400).json({ message: 'Invalid OTP' });
+            return;
+        }
+
+        // Clear the OTP and mark account as verified
+        customerAccount.otp = "";
+        customerAccount.otpExpiresAt = null;
+
+        await customerAccount.save();
+
+        res.status(200).json({ message: 'Email verified successfully' });
+    } catch (error) {
+        console.error('Error verifying OTP:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+export const resendOTP = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { userId } = req.body;
+        const customerAccount = await Customer_account.findOne({ where: { id: userId } });
+
+        if (!customerAccount) {
+            res.status(404).json({ message: 'Account not found' });
+            return;
+        }
+
+        // Generate a new OTP
+        const otp = generateOTP();
+        const hashedOTP = await bcrypt.hash(otp, 10);
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // OTP valid for 10 minutes
+
+        // Update the account with new OTP
+        customerAccount.otp = hashedOTP;
+        customerAccount.otpExpiresAt = otpExpiresAt;
+
+        await customerAccount.save();
+
+        // Send the OTP to the user's email
+        await sendOTPEmail(customerAccount.email, otp);
+
+        res.status(200).json({ message: 'A new OTP has been sent to your email.' });
+    } catch (error) {
+        console.error('Error resending OTP:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+
+
 
 export const loginCustomer = async (
     req: Request,
@@ -122,6 +205,8 @@ export const loginCustomer = async (
             throw new Error("JWT_SECRET is not defined");
         }
 
+        const isEmailVerified = !customer_account.otp; // If OTP is null or empty, the email is verified
+
         const token = jwt.sign(
             {
                 id: customer_account.id,
@@ -135,6 +220,7 @@ export const loginCustomer = async (
         res.json({
             customer_account,
             token,
+            isEmailVerified,//send the verification status to frontend.
         });
     } catch (error) {
         console.error(error);
@@ -404,9 +490,9 @@ export const updateCustomerAvatar = async (
 
 export const topUpGemsCustomer = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { 
-            currency_cents: currencyCents, 
-            gems_added: gemsAdded, 
+        const {
+            currency_cents: currencyCents,
+            gems_added: gemsAdded,
         } = req.body;
 
         if (!currencyCents || currencyCents <= 0) {
@@ -421,7 +507,7 @@ export const topUpGemsCustomer = async (req: Request, res: Response): Promise<vo
         const customerAccount = await Customer_account.findOne({ where: { id: userId } });
 
         if (!customerAccount) {
-            res.status(404).json({ message: "User not found"});
+            res.status(404).json({ message: "User not found" });
         } else {
             // Add the top-up amount to the existing balance
             const currentGemBalance = parseFloat(customerAccount.gem_balance.toString());
