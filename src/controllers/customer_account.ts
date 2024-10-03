@@ -260,6 +260,7 @@ export const deleteAccount = async (
 ): Promise<void> => {
     try {
         const userId = (req as any).user.id;
+        const { password } = req.body;
 
         const customer_account = await Customer_account.findOne({
             where: { id: userId },
@@ -269,6 +270,20 @@ export const deleteAccount = async (
             res.status(404).json({
                 status: 404,
                 message: "User not found",
+            });
+            return;
+        }
+
+        // Verify password
+        const isPasswordValid = await bcrypt.compare(
+            password,
+            customer_account.password
+        );
+
+        if (!isPasswordValid) {
+            res.status(401).json({
+                status: 401,
+                message: "Invalid password",
             });
             return;
         }

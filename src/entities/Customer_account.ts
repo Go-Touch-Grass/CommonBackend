@@ -49,7 +49,10 @@ export class Customer_account extends AbstractUser {
     })
     role: UserRole = UserRole.CUSTOMER;
 
-    @OneToOne(() => Avatar, avatar => avatar.customer, { cascade: true })
+    @OneToOne(() => Avatar, avatar => avatar.customer, { 
+        cascade: true,
+        onDelete: "CASCADE"
+    })
     @JoinColumn()
     avatar: Avatar;
 

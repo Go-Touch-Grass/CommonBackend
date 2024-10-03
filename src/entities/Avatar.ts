@@ -19,7 +19,9 @@ export class Avatar extends BaseEntity {
     })
     avatarType: AvatarType;
 
-    @OneToOne(() => Customer_account, customer => customer.avatar)
+    @OneToOne(() => Customer_account, customer => customer.avatar, {
+        onDelete: "CASCADE"
+    })
     @JoinColumn({ name: "customer_id" })
     customer: Customer_account;
 
