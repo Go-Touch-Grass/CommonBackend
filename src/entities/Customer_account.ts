@@ -49,6 +49,13 @@ export class Customer_account extends AbstractUser {
     })
     role: UserRole = UserRole.CUSTOMER;
 
+    // OTP and OTP expiration
+    @Column({ nullable: true })
+    otp: string;
+
+    @Column({ nullable: true, type: 'timestamp' })
+    otpExpiresAt: Date | null; //allow null
+
     @OneToOne(() => Avatar, avatar => avatar.customer, { cascade: true })
     @JoinColumn()
     avatar: Avatar;

@@ -1,13 +1,15 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth";
-import { 
-    registerCustomer, 
-    loginCustomer, 
-    getUserInfo, 
-    editProfile, 
-    deleteAccount, 
+import {
+    registerCustomer,
+    loginCustomer,
+    getUserInfo,
+    editProfile,
+    deleteAccount,
     changePassword,
-    topUpGemsCustomer
+    topUpGemsCustomer,
+    verifyOTP,
+    resendOTP,
 } from "../controllers/customer_account";
 import { UserRole } from '../entities/abstract/AbstractUser';
 import { updateCustomerAvatar } from "../controllers/customer_account";
@@ -15,6 +17,9 @@ import { updateCustomerAvatar } from "../controllers/customer_account";
 const router = express.Router();
 
 router.post("/auth/register", registerCustomer);
+router.post("/auth/verifyOTP", verifyOTP);
+router.post("/auth/resendOTP", resendOTP);
+
 router.post("/auth/login", loginCustomer);
 router.get("/auth/profile", authMiddleware([UserRole.CUSTOMER]), getUserInfo);
 router.put("/auth/profile/edit", authMiddleware([UserRole.CUSTOMER]), editProfile);
