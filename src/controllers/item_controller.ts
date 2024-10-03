@@ -3,12 +3,13 @@ import { Item, ItemType } from '../entities/Item';
 
 export const createItem = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { name, type, filepath } = req.body;
+        const { name, type, filepath, approved } = req.body;
 
         const item = Item.create({
             name,
             type,
-            filepath
+            filepath,
+            approved: approved || false
         });
 
         await item.save();
@@ -22,10 +23,10 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
 
 export const getItems = async (req: Request, res: Response): Promise<void> => {
     try {
-        const items = await Item.find();
+        const items = await Item.find({ where: { approved: true } });
         res.json(items);
     } catch (error) {
-        console.error('Error fetching items:', error);
+        console.error('Error fetching approved items:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };

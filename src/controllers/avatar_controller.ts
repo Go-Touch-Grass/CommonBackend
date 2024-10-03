@@ -2,11 +2,11 @@ import { Request, Response } from 'express';
 import { Avatar, AvatarType } from '../entities/Avatar';
 import { Customer_account } from '../entities/Customer_account';
 import { Business_account } from '../entities/Business_account';
-import { Item } from '../entities/Item';
+import { Item, ItemType } from '../entities/Item';
 
 export const createAvatar = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { avatarType, hatId, shirtId, bottomId } = req.body;
+        const { avatarType, baseId, hatId, shirtId, bottomId } = req.body;
         const userId = (req as any).user.id; // Get user ID from authenticated request
 
         let avatar: Avatar;
@@ -31,9 +31,17 @@ export const createAvatar = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if (hatId) avatar.hat = await Item.findOneOrFail({ where: { id: hatId } });
-        if (shirtId) avatar.shirt = await Item.findOneOrFail({ where: { id: shirtId } });
-        if (bottomId) avatar.bottom = await Item.findOneOrFail({ where: { id: bottomId } });
+        // Set base item (required)
+        if (!baseId) {
+            res.status(400).json({ message: 'Base item is required' });
+            return;
+        }
+        avatar.base = await Item.findOneOrFail({ where: { id: baseId, type: ItemType.BASE } });
+
+        // Set optional items
+        if (hatId) avatar.hat = await Item.findOneOrFail({ where: { id: hatId, type: ItemType.HAT } });
+        if (shirtId) avatar.shirt = await Item.findOneOrFail({ where: { id: shirtId, type: ItemType.SHIRT } });
+        if (bottomId) avatar.bottom = await Item.findOneOrFail({ where: { id: bottomId, type: ItemType.BOTTOM } });
 
         await avatar.save();
 
@@ -49,7 +57,7 @@ export const getAvatarById = async (req: Request, res: Response): Promise<void> 
         const { id } = req.params;
         const avatar = await Avatar.findOne({
             where: { id: parseInt(id) },
-            relations: ['customer', 'business', 'hat', 'shirt', 'bottom']
+            relations: ['customer', 'business', 'base', 'hat', 'shirt', 'bottom']
         });
 
         if (!avatar) {
@@ -67,7 +75,7 @@ export const getAvatarById = async (req: Request, res: Response): Promise<void> 
 export const updateAvatar = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
-        const { hatId, shirtId, bottomId } = req.body;
+        const { baseId, hatId, shirtId, bottomId } = req.body;
 
         const avatar = await Avatar.findOne({ where: { id: parseInt(id) } });
 
@@ -76,9 +84,10 @@ export const updateAvatar = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if (hatId) avatar.hat = await Item.findOneOrFail({ where: { id: hatId } });
-        if (shirtId) avatar.shirt = await Item.findOneOrFail({ where: { id: shirtId } });
-        if (bottomId) avatar.bottom = await Item.findOneOrFail({ where: { id: bottomId } });
+        if (baseId) avatar.base = await Item.findOneOrFail({ where: { id: baseId, type: ItemType.BASE } });
+        if (hatId) avatar.hat = await Item.findOneOrFail({ where: { id: hatId, type: ItemType.HAT } });
+        if (shirtId) avatar.shirt = await Item.findOneOrFail({ where: { id: shirtId, type: ItemType.SHIRT } });
+        if (bottomId) avatar.bottom = await Item.findOneOrFail({ where: { id: bottomId, type: ItemType.BOTTOM } });
 
         await avatar.save();
 
@@ -95,7 +104,7 @@ export const getAvatarByCustomerId = async (req: Request, res: Response): Promis
         
         const avatar = await Avatar.findOne({
             where: { customer: { id: parseInt(customerId) } },
-            relations: ['customer', 'hat', 'shirt', 'bottom']
+            relations: ['customer', 'base', 'hat', 'shirt', 'bottom']
         });
 
         if (!avatar) {
@@ -124,7 +133,7 @@ export const getAvatarsByBusinessUsername = async (req: Request, res: Response):
 
         const avatars = await Avatar.find({
             where: { business: { business_id: business.business_id } },
-            relations: ['business', 'hat', 'shirt', 'bottom']
+            relations: ['business', 'base', 'hat', 'shirt', 'bottom']
         });
 
         if (!avatars || avatars.length === 0) {

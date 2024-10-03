@@ -1,6 +1,8 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Business_account } from "./Business_account";
 
 export enum ItemType {
+    BASE = 'base',
     HAT = 'hat',
     SHIRT = 'shirt',
     BOTTOM = 'bottom'
@@ -22,4 +24,14 @@ export class Item extends BaseEntity {
 
     @Column()
     filepath: string;
+
+    @Column({ default: false })
+    approved: boolean;
+
+    @Column({ nullable: true })
+    business_id: number;
+
+    @ManyToOne(() => Business_account, business => business.items)
+    @JoinColumn({ name: 'business_id' })
+    business: Business_account;
 }

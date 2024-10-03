@@ -102,12 +102,13 @@ const main = async () => {
             const itemRepository = AppDataSource.getRepository(Item);
 
             const defaultItems = [
-                { name: 'Baseball Cap', type: ItemType.HAT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/baseball_cap.png' },
-                { name: 'Cowboy Hat', type: ItemType.HAT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/cowboy_hat.png' },
-                { name: 'Love Shirt', type: ItemType.SHIRT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/love_shirt.png' },
-                { name: 'White Shirt', type: ItemType.SHIRT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/white_shirt.png' },
-                { name: 'Blue Skirt', type: ItemType.BOTTOM, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/blue_skirt.png' },
-                { name: 'Purple Pants', type: ItemType.BOTTOM, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/purple_pants.png' },
+                { name: 'Default Base', type: ItemType.BASE, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/base/avatar_base.png', approved: true },
+                { name: 'Baseball Cap', type: ItemType.HAT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/hat/baseball_cap.png', approved: true },
+                { name: 'Cowboy Hat', type: ItemType.HAT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/hat/cowboy_hat.png', approved: true },
+                { name: 'Love Shirt', type: ItemType.SHIRT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/shirt/love_shirt.png', approved: true },
+                { name: 'White Shirt', type: ItemType.SHIRT, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/shirt/white_shirt.png', approved: true },
+                { name: 'Blue Skirt', type: ItemType.BOTTOM, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/bottom/blue_skirt.png', approved: true },
+                { name: 'Purple Pants', type: ItemType.BOTTOM, filepath: 'https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/bottom/purple_pants.png', approved: true },
             ];
 
             for (const item of defaultItems) {

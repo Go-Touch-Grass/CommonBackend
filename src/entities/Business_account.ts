@@ -4,6 +4,7 @@ import { Outlet } from "./Outlet";
 import { AbstractUser, UserRole } from "./abstract/AbstractUser";
 import { Business_transaction } from "./Business_transaction";
 import { Avatar } from "./Avatar";
+import { Item } from "./Item";
 
 @Entity('business_account')
 export class Business_account extends AbstractUser {
@@ -68,4 +69,7 @@ export class Business_account extends AbstractUser {
 
     @OneToMany(() => Avatar, avatar => avatar.business)
     avatars: Avatar[];
+
+    @OneToMany(() => Item, item => item.business)
+    items: Item[];
 }

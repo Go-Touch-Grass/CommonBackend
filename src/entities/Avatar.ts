@@ -28,6 +28,10 @@ export class Avatar extends BaseEntity {
     business: Business_account;
 
     @ManyToOne(() => Item)
+    @JoinColumn({ name: "base_id" })
+    base: Item;
+
+    @ManyToOne(() => Item)
     @JoinColumn({ name: "hat_id" })
     hat: Item;
 
