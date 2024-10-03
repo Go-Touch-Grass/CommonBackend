@@ -1,7 +1,8 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth";
 
-import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, topUpGemsBusiness } from "../controllers/business";
+
+import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, topUpGemsBusiness, getVoucher, editVoucher, deleteVoucher, searchVouchers } from "../controllers/business";
 
 
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
@@ -34,7 +35,15 @@ router.post('/api/business/outlets', authMiddleware([UserRole.BUSINESS]), create
 router.delete('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSINESS]), deleteOutlet);
 
 router.post("/api/business/create_voucher", authMiddleware([UserRole.BUSINESS]), createVoucher);
-router.get("/api/business/get_all_voucher", authMiddleware([UserRole.BUSINESS]), getAllVoucher);
+router.get("/api/business/vouchers", authMiddleware([UserRole.BUSINESS]), getAllVoucher);
+router.get("/api/business/vouchers/:listing_id", authMiddleware([UserRole.BUSINESS]), getVoucher
+);
+
+router.put("/api/business/vouchers/:listing_id", authMiddleware([UserRole.BUSINESS]), editVoucher);
+
+router.delete('/api/business/vouchers/:listing_id', authMiddleware([UserRole.BUSINESS]), deleteVoucher);
+router.get("/api/business/vouchers/search", authMiddleware([UserRole.BUSINESS]), searchVouchers);
+
 
 router.delete('/api/business/account', authMiddleware([UserRole.BUSINESS]), deleteAccount);
 router.get('/api/business/subscription/:username', authMiddleware([UserRole.BUSINESS]), viewSubscription);
@@ -47,3 +56,5 @@ router.put('/api/business/update_subscription/:subscriptionId', authMiddleware([
 router.post('/api/business/top_up_gems', authMiddleware([UserRole.BUSINESS]), topUpGemsBusiness);
 
 export { router as businessRouter };
+
+
