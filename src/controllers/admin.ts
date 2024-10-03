@@ -97,7 +97,7 @@ export const getAllPendingBusinessRegistrations = async (req: Request, res: Resp
     }
 }
 
-export const getOnePendingBusinessRegistration = async (req: Request, res: Response): Promise<void> => {
+export const getPendingBusinessRegistrationByRegistrationId = async (req: Request, res: Response): Promise<void> => {
     try {
         const { registration_id } = req.params;
         const id = parseInt(registration_id);
@@ -112,7 +112,7 @@ export const getOnePendingBusinessRegistration = async (req: Request, res: Respo
     }
 }
 
-export const reviewOnePendingBusinessRegistration = async (req: Request, res: Response): Promise<void> => {
+export const reviewPendingBusinessRegistrationByRegistrationId = async (req: Request, res: Response): Promise<void> => {
     try {
         const { registration_id } = req.params;
         const id = parseInt(registration_id);
@@ -186,7 +186,7 @@ export const getAllCustomers = async (req: Request, res: Response): Promise<void
     }
 }
 
-export const getOneCustomer = async (req: Request, res: Response): Promise<void> => {
+export const getCustomerByCustomerId = async (req: Request, res: Response): Promise<void> => {
     try {
         const { customer_id } = req.params;
         const id = parseInt(customer_id);
@@ -197,6 +197,35 @@ export const getOneCustomer = async (req: Request, res: Response): Promise<void>
         res.status(500).json({
             status: 500,
             message: 'Failed to fetch customer'
+        });
+    }
+}
+
+export const getCustomerTransactionsByCustomerId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { customer_id } = req.params;
+        const id = parseInt(customer_id);
+        const customer = await Customer_account.findOne({
+            where: { id: id },
+            relations: ['transactions']  // Ensure transactions are loaded
+        });
+
+        if (!customer) {
+            res.status(400).json({
+                status: 400,
+                message: 'Customer not found'
+            });
+            return;
+        }
+
+        const customerTransactions = await customer.transactions;
+
+        res.status(200).json(customerTransactions);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to fetch customer transactions'
         });
     }
 }
