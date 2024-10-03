@@ -10,6 +10,7 @@ import {
 } from "typeorm";
 import { AbstractUser, UserRole } from './abstract/AbstractUser';
 import { Avatar } from "./Avatar";
+import { Customer_transaction } from "./Customer_transaction";
 
 @Entity("Customer_account")
 export class Customer_account extends AbstractUser {
@@ -51,4 +52,10 @@ export class Customer_account extends AbstractUser {
     @OneToOne(() => Avatar, avatar => avatar.customer, { cascade: true })
     @JoinColumn()
     avatar: Avatar;
+
+    @Column({ type: 'int', default: 0 })
+    gem_balance: number; // Should not initialize here, default is set to 0
+
+    @OneToMany(() => Customer_transaction, transaction => transaction.customer_account)
+    transactions: Customer_transaction[];
 }

@@ -968,9 +968,12 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
     }
 };
 
-export const topUpGems = async (req: Request, res: Response): Promise<void> => {
+export const topUpGemsBusiness = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { currency_cents: currencyCents, gems_added: gemsAdded } = req.body;
+        const { 
+            currency_cents: currencyCents, 
+            gems_added: gemsAdded, 
+        } = req.body;
 
         if (!currencyCents || currencyCents <= 0) {
             res.status(400).json({ message: 'Invalid currency amount' });

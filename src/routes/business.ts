@@ -20,7 +20,7 @@ import {
     createOutletSubscription, 
     endSubscription, 
     editSubscription,
-    topUpGems,
+    topUpGemsBusiness,
 } from "../controllers/business";
 
 
@@ -61,6 +61,6 @@ router.post('/api/business/outlet/subscription/:username/:outletId', authMiddlew
 router.delete('/api/business/end_subscription', authMiddleware([UserRole.BUSINESS]), endSubscription)
 router.put('/api/business/update_subscription/:subscriptionId', authMiddleware([UserRole.BUSINESS]), editSubscription)
 
-router.post('/api/business/top_up_gems', authMiddleware([UserRole.BUSINESS]), topUpGems);
+router.post('/api/business/top_up_gems', authMiddleware([UserRole.BUSINESS]), topUpGemsBusiness);
 
 export { router as businessRouter };

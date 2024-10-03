@@ -22,6 +22,7 @@ import { Item, ItemType } from "./entities/Item";
 import { Avatar } from "./entities/Avatar";
 import { itemRouter } from "./routes/item_router";
 import { avatarRouter } from "./routes/avatar_router";
+import { Customer_transaction } from "./entities/Customer_transaction";
 
 dotenv.config();
 
@@ -41,7 +42,8 @@ export const AppDataSource = new DataSource({
         BusinessAccountSubscription,
         Business_transaction,
         Item,
-        Avatar
+        Avatar,
+        Customer_transaction,
     ],
     synchronize: true,
 });
