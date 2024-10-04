@@ -27,7 +27,7 @@ import {
     editVoucher, 
     deleteVoucher, 
     searchVouchers,
-    verifyTopUp,
+    verifyTopUpBusiness,
 } from "../controllers/business";
 
 
@@ -79,7 +79,7 @@ router.post('/api/business/outlet/subscription/:username/:outletId', authMiddlew
 router.delete('/api/business/end_subscription', authMiddleware([UserRole.BUSINESS]), endSubscription)
 router.put('/api/business/update_subscription/:subscriptionId', authMiddleware([UserRole.BUSINESS]), editSubscription)
 
-router.post('/api/business/verify_topup', authMiddleware([UserRole.BUSINESS]), verifyTopUp);
+router.post('/api/business/verify_topup', authMiddleware([UserRole.BUSINESS]), verifyTopUpBusiness);
 
 export { router as businessRouter };
 

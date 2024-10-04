@@ -7,7 +7,7 @@ import {
     editProfile,
     deleteAccount,
     changePassword,
-    topUpGemsCustomer,
+    verifyTopUpCustomer,
     verifyOTP,
     resendOTP,
 } from "../controllers/customer_account";
@@ -27,6 +27,6 @@ router.delete("/auth/profile/delete", authMiddleware([UserRole.CUSTOMER]), delet
 router.post("/auth/change-password", authMiddleware([UserRole.CUSTOMER]), changePassword);
 router.post("/auth/update-avatar", authMiddleware([UserRole.CUSTOMER]), updateCustomerAvatar);
 
-router.post('/auth/top_up_gems', authMiddleware([UserRole.CUSTOMER]), topUpGemsCustomer);
+router.post('/auth/verify-topUp', authMiddleware([UserRole.CUSTOMER]), verifyTopUpCustomer);
 
 export { router as customerAccountRouter };

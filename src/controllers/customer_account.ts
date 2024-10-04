@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import { Avatar } from "../entities/Avatar";
 import { Customer_transaction } from "../entities/Customer_transaction";
 import { generateOTP, sendOTPEmail } from '../utils/otp';
+import { stripe } from "../index";
 
 
 // Function to calculate total XP required to reach a certain level
@@ -488,49 +489,66 @@ export const updateCustomerAvatar = async (
     }
 };
 
-export const topUpGemsCustomer = async (req: Request, res: Response): Promise<void> => {
+export const verifyTopUpCustomer = async (req: Request, res: Response): Promise<void> => {
     try {
         const {
-            currency_cents: currencyCents,
-            gems_added: gemsAdded,
+            paymentIntentId,
+            gemsAdded,
         } = req.body;
 
-        if (!currencyCents || currencyCents <= 0) {
-            res.status(400).json({ message: 'Invalid currency amount' });
+        if (!paymentIntentId || !gemsAdded || gemsAdded <= 0) {
+            res.status(400).json({ success: false, message: 'Invalid request parameters' });
+            return;
         }
 
-        if (!gemsAdded || gemsAdded <= 0) {
-            res.status(400).json({ message: 'Invalid gem amount' });
+        // Retrieve the PaymentIntent from Stripe to verify payment status
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+        if (paymentIntent.status !== 'succeeded') {
+            res.status(400).json({ success: false, message: 'Payment not completed or failed' });
+            return;
         }
 
+        // Retrieve user from JWT token
         const userId = (req as any).user.id;
         const customerAccount = await Customer_account.findOne({ where: { id: userId } });
 
         if (!customerAccount) {
-            res.status(404).json({ message: "User not found" });
-        } else {
-            // Add the top-up amount to the existing balance
-            const currentGemBalance = parseFloat(customerAccount.gem_balance.toString());
-            const newGemBalance = currentGemBalance + gemsAdded;
-
-            // Update the balance and save
-            customerAccount.gem_balance = parseFloat(newGemBalance.toFixed(2));
-            await customerAccount.save();
-
-            const currencyDollars = currencyCents / 100;  // Convert cents to dollars
-
-            const customerTransaction = Customer_transaction.create({
-                currency_amount: currencyDollars,
-                gems_added: gemsAdded,
-                customer_account: customerAccount
-            });
-            await customerTransaction.save();
-
-            // Respond with the updated balance
-            res.status(200).json({ message: 'Gems topped up successfully', balance: customerAccount.gem_balance });
+            res.status(404).json({ success: false, message: 'Account not found' });
+            return;
         }
+
+        // Check if this payment intent has already been processed
+        const transactionExists = await Customer_transaction.findOne({ where: { stripe_payment_intent_id: paymentIntentId } });
+        if (transactionExists) {
+            res.status(400).json({ success: false, message: 'This payment has already been processed.' });
+            return;
+        }
+
+        // Add the gems to the customer account balance
+        const currentGemBalance = parseFloat(customerAccount.gem_balance.toString());
+        const newGemBalance = currentGemBalance + gemsAdded;
+
+        // Update the balance and save
+        customerAccount.gem_balance = parseFloat(newGemBalance.toFixed(2));
+        await customerAccount.save();
+
+        // Log the transaction in the customer transaction table
+        const currencyDollars = paymentIntent.amount_received / 100; // Stripe provides amount in cents
+        const customerTransaction = Customer_transaction.create({
+            currency_amount: currencyDollars,
+            gems_added: gemsAdded,
+            customer_account: customerAccount,
+            stripe_payment_intent_id: paymentIntent.id  // Store PaymentIntent ID to ensure idempotency
+        });
+        await customerTransaction.save();
+
+        // Respond with the updated balance
+        res.status(200).json({ success: true, message: 'Gems topped up successfully', balance: customerAccount.gem_balance });
+        return;
+        
     } catch (error) {
-        console.error('Error topping up gems:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error verifying payment and topping up gems:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };

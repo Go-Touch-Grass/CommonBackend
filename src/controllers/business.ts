@@ -1257,9 +1257,12 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
     }
 };
 
-export const verifyTopUp = async (req: Request, res: Response): Promise<void> => {
+export const verifyTopUpBusiness = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { paymentIntentId, gemsAdded } = req.body;
+        const { 
+            paymentIntentId, 
+            gemsAdded, 
+        } = req.body;
 
         if (!paymentIntentId || !gemsAdded || gemsAdded <= 0) {
             res.status(400).json({ success: false, message: 'Invalid request parameters' });
