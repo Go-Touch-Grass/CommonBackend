@@ -14,6 +14,7 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
         // Send client secret to the frontend
         res.status(200).json({
           clientSecret: paymentIntent.client_secret,
+          paymentIntentId: paymentIntent.id,
         });
       } catch (error) {
         res.status(500).json({ error: error.message });

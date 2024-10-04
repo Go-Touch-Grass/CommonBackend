@@ -1262,7 +1262,7 @@ export const verifyTopUp = async (req: Request, res: Response): Promise<void> =>
         const { paymentIntentId, gemsAdded } = req.body;
 
         if (!paymentIntentId || !gemsAdded || gemsAdded <= 0) {
-            res.status(400).json({ message: 'Invalid request parameters' });
+            res.status(400).json({ success: false, message: 'Invalid request parameters' });
             return;
         }
 
@@ -1270,7 +1270,7 @@ export const verifyTopUp = async (req: Request, res: Response): Promise<void> =>
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
         if (paymentIntent.status !== 'succeeded') {
-            res.status(400).json({ message: 'Payment not completed or failed' });
+            res.status(400).json({ success: false, message: 'Payment not completed or failed' });
             return;
         }
 
@@ -1279,14 +1279,14 @@ export const verifyTopUp = async (req: Request, res: Response): Promise<void> =>
         const businessAccount = await Business_account.findOne({ where: { business_id: userId } });
 
         if (!businessAccount) {
-            res.status(404).json({ message: 'Account not found' });
+            res.status(404).json({ success: false, message: 'Account not found' });
             return;
         }
 
         // Check if this payment intent has already been processed
         const transactionExists = await Business_transaction.findOne({ where: { stripe_payment_intent_id: paymentIntentId } });
         if (transactionExists) {
-            res.status(400).json({ message: 'This payment has already been processed.' });
+            res.status(400).json({ success: false, message: 'This payment has already been processed.' });
             return;
         }
 
@@ -1309,11 +1309,11 @@ export const verifyTopUp = async (req: Request, res: Response): Promise<void> =>
         await businessTransaction.save();
 
         // Respond with the updated balance
-        res.status(200).json({ message: 'Gems topped up successfully', balance: businessAccount.gem_balance });
+        res.status(200).json({ success: true, message: 'Gems topped up successfully', balance: businessAccount.gem_balance });
         return;
         
     } catch (error) {
         console.error('Error verifying payment and topping up gems:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
