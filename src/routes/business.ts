@@ -2,7 +2,33 @@ import express from "express";
 import { authMiddleware } from "../middleware/auth";
 
 
-import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, topUpGemsBusiness, getVoucher, editVoucher, deleteVoucher, searchVouchers } from "../controllers/business";
+import { 
+    createAccount, 
+    createOutlet, 
+    deleteAccount, 
+    deleteOutlet, 
+    loginAccount, 
+    logoutAccount, 
+    registerBusiness, 
+    resendOTP, 
+    retrieveProfile, 
+    updateProfile, 
+    uploadProfileImage, 
+    verifyOTP, 
+    viewSubscription, 
+    renewSubscription, 
+    createSubscription, 
+    createOutletSubscription, 
+    endSubscription, 
+    editSubscription, 
+    createVoucher, 
+    getAllVoucher,
+    getVoucher, 
+    editVoucher, 
+    deleteVoucher, 
+    searchVouchers,
+    verifyTopUp,
+} from "../controllers/business";
 
 
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
@@ -53,7 +79,7 @@ router.post('/api/business/outlet/subscription/:username/:outletId', authMiddlew
 router.delete('/api/business/end_subscription', authMiddleware([UserRole.BUSINESS]), endSubscription)
 router.put('/api/business/update_subscription/:subscriptionId', authMiddleware([UserRole.BUSINESS]), editSubscription)
 
-router.post('/api/business/top_up_gems', authMiddleware([UserRole.BUSINESS]), topUpGemsBusiness);
+router.post('/api/business/verify_topup', authMiddleware([UserRole.BUSINESS]), verifyTopUp);
 
 export { router as businessRouter };
 

@@ -11,6 +11,7 @@ import { addMonths } from 'date-fns'; // Import a helper function for date manip
 import { Between, getRepository } from 'typeorm';
 import { Business_voucher } from '../entities/Business_voucher';
 import { IsNull } from 'typeorm';
+import { stripe } from '../index';
 
 export const editSubscription = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -1256,49 +1257,63 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
     }
 };
 
-export const topUpGemsBusiness = async (req: Request, res: Response): Promise<void> => {
+export const verifyTopUp = async (req: Request, res: Response): Promise<void> => {
     try {
-        const {
-            currency_cents: currencyCents,
-            gems_added: gemsAdded,
-        } = req.body;
+        const { paymentIntentId, gemsAdded } = req.body;
 
-        if (!currencyCents || currencyCents <= 0) {
-            res.status(400).json({ message: 'Invalid currency amount' });
+        if (!paymentIntentId || !gemsAdded || gemsAdded <= 0) {
+            res.status(400).json({ message: 'Invalid request parameters' });
+            return;
         }
 
-        if (!gemsAdded || gemsAdded <= 0) {
-            res.status(400).json({ message: 'Invalid gem amount' });
+        // Retrieve the PaymentIntent from Stripe to verify payment status
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+        if (paymentIntent.status !== 'succeeded') {
+            res.status(400).json({ message: 'Payment not completed or failed' });
+            return;
         }
 
-        const userId = (req as any).user.id;  // Get user from JWT token
+        // Retrieve user from JWT token
+        const userId = (req as any).user.id;
         const businessAccount = await Business_account.findOne({ where: { business_id: userId } });
 
         if (!businessAccount) {
             res.status(404).json({ message: 'Account not found' });
-        } else {
-            // Add the top-up amount to the existing balance
-            const currentGemBalance = parseFloat(businessAccount.gem_balance.toString());
-            const newGemBalance = currentGemBalance + gemsAdded;
-
-            // Update the balance and save
-            businessAccount.gem_balance = parseFloat(newGemBalance.toFixed(2));
-            await businessAccount.save();
-
-            const currencyDollars = currencyCents / 100;  // Convert cents to dollars
-
-            const businessTransaction = Business_transaction.create({
-                currency_amount: currencyDollars,
-                gems_added: gemsAdded,
-                business_account: businessAccount
-            });
-            await businessTransaction.save();
-
-            // Respond with the updated balance
-            res.status(200).json({ message: 'Gems topped up successfully', balance: businessAccount.gem_balance });
+            return;
         }
+
+        // Check if this payment intent has already been processed
+        const transactionExists = await Business_transaction.findOne({ where: { stripe_payment_intent_id: paymentIntentId } });
+        if (transactionExists) {
+            res.status(400).json({ message: 'This payment has already been processed.' });
+            return;
+        }
+
+        // Add the gems to the business account balance
+        const currentGemBalance = parseFloat(businessAccount.gem_balance.toString());
+        const newGemBalance = currentGemBalance + gemsAdded;
+
+        // Update the balance and save
+        businessAccount.gem_balance = parseFloat(newGemBalance.toFixed(2));
+        await businessAccount.save();
+
+        // Log the transaction in the business transaction table
+        const currencyDollars = paymentIntent.amount_received / 100; // Stripe provides amount in cents
+        const businessTransaction = Business_transaction.create({
+            currency_amount: currencyDollars,
+            gems_added: gemsAdded,
+            business_account: businessAccount,
+            stripe_payment_intent_id: paymentIntent.id  // Store PaymentIntent ID to ensure idempotency
+        });
+        await businessTransaction.save();
+
+        // Respond with the updated balance
+        res.status(200).json({ message: 'Gems topped up successfully', balance: businessAccount.gem_balance });
+        return;
+        
     } catch (error) {
-        console.error('Error topping up gems:', error);
+        console.error('Error verifying payment and topping up gems:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
