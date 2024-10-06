@@ -35,6 +35,9 @@ export class BusinessAccountSubscription extends BaseEntity {
     @Column({ type: 'int', default: 3 })
     duration: number; //by months
 
+    @Column({ default: false }) // Add this field
+    autoRenew: boolean;
+
     @BeforeInsert()
     setExpirationDateAndCost() {
         const activationDate = new Date();
