@@ -2,7 +2,7 @@ import express from "express";
 import { authMiddleware } from "../middleware/auth";
 
 
-import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, topUpGemsBusiness, getVoucher, editVoucher, deleteVoucher, searchVouchers } from "../controllers/business";
+import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, topUpGemsBusiness, getVoucher, editVoucher, deleteVoucher, searchVouchers, updateSubscription } from "../controllers/business";
 
 
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
@@ -54,7 +54,5 @@ router.delete('/api/business/end_subscription', authMiddleware([UserRole.BUSINES
 router.put('/api/business/update_subscription/:subscriptionId', authMiddleware([UserRole.BUSINESS]), editSubscription)
 
 router.post('/api/business/top_up_gems', authMiddleware([UserRole.BUSINESS]), topUpGemsBusiness);
-
+router.put('/api/business/update_subscription', authMiddleware([UserRole.BUSINESS]), updateSubscription);
 export { router as businessRouter };
-
-

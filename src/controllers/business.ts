@@ -8,9 +8,10 @@ import { generateOTP, sendOTPEmail, sendSubscriptionRenewEmail } from '../utils/
 import { BusinessAccountSubscription } from '../entities/Business_account_subscription';
 import { Business_transaction } from '../entities/Business_transaction';
 import { addMonths } from 'date-fns'; // Import a helper function for date manipulation
-import { Between, getRepository } from 'typeorm';
+import { Between, getRepository, LessThanOrEqual } from 'typeorm';
 import { Business_voucher } from '../entities/Business_voucher';
 import { IsNull } from 'typeorm';
+import cron from 'node-cron';
 
 export const editSubscription = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -346,19 +347,152 @@ export const checkExpiringSubscription = async (): Promise<void> => {
     }
 }
 
+cron.schedule('* * * * *', async () => {
+    console.log('Running automatic subscription renewal job...');
+
+    try {
+        const expiringSubscriptions = await BusinessAccountSubscription.find({
+            where: {
+                expiration_date: LessThanOrEqual(new Date()), // Check for expired subscriptions
+                autoRenew: true, // Only fetch subscriptions marked for auto-renewal
+            },
+            relations: ['business_register_business', 'business_register_business.business_account'], // Ensure the necessary relations are fetched
+        });
+
+        console.log(`Found ${expiringSubscriptions.length} expiring subscriptions for auto-renewal`);
+
+        for (const subscription of expiringSubscriptions) {
+            // Ensure that business_register_business and business_account exist
+            if (!subscription.business_register_business || !subscription.business_register_business.business_account) {
+                console.log(`Missing business_register_business or business_account for subscription: ${subscription.subscription_id}`);
+                continue; // Skip this subscription
+            }
+
+            const businessAccount = subscription.business_register_business.business_account;
+
+            // Pricing structure
+            const pricing = {
+                base: {
+                    1: { price: 50, gems: 500 },
+                    2: { price: 90, gems: 900 },
+                    3: { price: 120, gems: 1200 },
+                },
+                extra: {
+                    1: { price: 10, gems: 100 },
+                    2: { price: 18, gems: 180 },
+                    3: { price: 25, gems: 250 },
+                },
+            };
+
+            // Calculate total gems needed for renewal
+            const total_gem = pricing.base[subscription.duration].gems +
+                (pricing.extra[subscription.distance_coverage]?.gems || 0) * subscription.duration;
+
+            // Check if the business account has enough gems for renewal
+            if (businessAccount.gem_balance >= total_gem) {
+                // Deduct gem balance
+                businessAccount.gem_balance -= total_gem;
+                await businessAccount.save();
+
+                // Extend expiration date
+                const newExpirationDate = new Date(subscription.expiration_date);
+                newExpirationDate.setMonth(newExpirationDate.getMonth() + subscription.duration);
+                subscription.expiration_date = newExpirationDate;
+
+                await subscription.save();
+
+                console.log(`Subscription ${subscription.subscription_id} renewed successfully`);
+            } else {
+                console.log(`Not enough gems to renew subscription ${subscription.subscription_id}. Sending notification...`);
+                // Notification logic can be added here
+            }
+        }
+    } catch (error) {
+        console.error('Error during automatic subscription renewal:', error);
+    }
+});
+
+
+
+
+
+export const updateSubscription = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { username, subscription_id, duration, distance_coverage, autoRenew } = req.body;
+
+        console.log('Request body:', req.body);
+
+        // Find the subscription by subscription_id
+        const existingSubscription = await BusinessAccountSubscription.findOne({
+            where: { subscription_id },
+        });
+
+        if (!existingSubscription) {
+            console.log(`No subscription found with subscription_id: ${subscription_id}`);
+            res.status(404).json({ status: 404, message: 'No subscription found to update' });
+            return;
+        }
+
+        console.log('Found existing subscription:', existingSubscription);
+
+        // Check if the request includes a username, and if it matches the subscription owner
+        const associatedBusiness = await Business_account.findOne({ where: { username } });
+        if (!associatedBusiness) {
+            console.log(`Unauthorized attempt by user ${username}`);
+            res.status(401).json({ status: 401, message: 'Unauthorized' });
+            return;
+        }
+
+        // Update subscription fields
+        if (duration) existingSubscription.duration = duration;
+        if (distance_coverage) existingSubscription.distance_coverage = distance_coverage;
+        if (autoRenew !== undefined) existingSubscription.autoRenew = autoRenew;
+
+        // Save the updated subscription
+        await existingSubscription.save();
+
+        console.log('Subscription successfully updated:', existingSubscription);
+
+        res.status(200).json({
+            status: 200,
+            message: 'Subscription successfully updated',
+            subscription: existingSubscription,
+        });
+    } catch (error) {
+        console.error('Error updating subscription:', error);
+        res.status(500).json({ status: 500, message: 'Internal Server Error', error: error.message });
+    }
+};
+
+
+
+
+
 export const renewSubscription = async (req: Request, res: Response): Promise<void> => {
     try {
         const { username, outlet_id, duration, distance_coverage } = req.body;
 
-
         console.log('Request body:', req.body);
 
+        const pricing = {
+            base: {
+                1: { price: 50, gems: 500 },
+                2: { price: 90, gems: 900 },
+                3: { price: 120, gems: 1200 },
+            },
+            extra: {
+                1: { price: 10, gems: 100 },
+                2: { price: 18, gems: 180 },
+                3: { price: 25, gems: 250 },
+            },
+        };
+
+        const total_gem = parseInt(pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0) * duration);
 
         const businessAccount = await Business_account.findOne({
             where: { username },
             relations: ['business']
         });
-
 
         if (!businessAccount) {
             console.log(`Business account with username "${username}" not found.`);
@@ -367,6 +501,11 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
         }
 
         console.log('Found business account:', businessAccount);
+
+        if (businessAccount.gem_balance < total_gem) {
+            res.status(400).json({ status: 400, message: 'Not enough gems to renew subscription' });
+            return;
+        }
 
         // Find the existing subscription by outlet ID (or main subscription)
         const existingSubscription = await BusinessAccountSubscription.findOne({
@@ -377,7 +516,6 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
             relations: ['business_register_business']
         });
 
-
         if (!existingSubscription) {
             console.log(`No existing subscription found for outlet_id: ${outlet_id} and business: ${businessAccount.business}`);
             res.status(404).json({ status: 404, message: 'No existing subscription found to renew' });
@@ -386,25 +524,25 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
 
         console.log('Found existing subscription:', existingSubscription);
 
-
         const currentDate = new Date();
-        const newExpirationDate = new Date(currentDate);
+        const newExpirationDate = new Date(existingSubscription.expiration_date);
 
+        // Extend subscription expiration date by adding the duration
+        newExpirationDate.setMonth(newExpirationDate.getMonth() + duration);
 
-        newExpirationDate.setMonth(currentDate.getMonth() + duration);
-
+        // Deduct the total gem cost from the gem balance
+        businessAccount.gem_balance -= total_gem;
+        await businessAccount.save();
 
         existingSubscription.activation_date = currentDate;
         existingSubscription.expiration_date = newExpirationDate;
         existingSubscription.duration = duration;
         existingSubscription.distance_coverage = distance_coverage;
-
+        existingSubscription.total_gem = total_gem;
 
         await existingSubscription.save();
 
-
         console.log('Subscription successfully renewed:', existingSubscription);
-
 
         res.status(200).json({
             status: 200,
@@ -416,6 +554,7 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
         res.status(500).json({ status: 500, message: 'Internal Server Error', error: error.message });
     }
 };
+
 
 
 export const viewSubscription = async (req: Request, res: Response): Promise<void> => {
