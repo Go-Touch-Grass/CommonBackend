@@ -914,6 +914,56 @@ export const registerBusiness = async (req: Request, res: Response): Promise<voi
     }
 };
 
+export const editRegisterBusiness = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const username = (req as any).user.username;
+        const updatedData = req.body; // Grab the updated data from the request body
+
+        // Find the business account using the username
+        const businessAccount = await Business_account.findOneBy({ username });
+        if (!businessAccount) {
+            res.status(404).json({ message: 'Business account not found' });
+            return;
+        }
+
+        // Find the registered business associated with the business account
+        const registeredBusiness = await Business_register_business.findOne({
+            where: { business_account: businessAccount },
+        });
+
+        if (!registeredBusiness) {
+            res.status(404).json({ message: 'Registered business not found' });
+            return;
+        }
+
+        // Update the registered business fields based on the provided data
+        if (updatedData.entityName) {
+            registeredBusiness.entityName = updatedData.entityName;
+        }
+        if (updatedData.location) {
+            registeredBusiness.location = updatedData.location;
+        }
+        if (updatedData.category) {
+            registeredBusiness.category = updatedData.category;
+        }
+
+        // Save the updated registered business
+        await registeredBusiness.save();
+
+        res.status(200).json({
+            message: 'Business registration updated successfully',
+            registeredBusiness,
+        });
+    } catch (error) {
+        console.error('Error updating business registration:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+
+
+
+
 export const createOutlet = async (req: Request, res: Response): Promise<void> => {
     try {
         //const { username } = req.params;
@@ -944,6 +994,62 @@ export const createOutlet = async (req: Request, res: Response): Promise<void> =
         res.status(500).json({ status: 500, message: 'Internal Server Error' });
     }
 };
+
+export const retrieveOutlet = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { outlet_id } = req.params;
+
+        const outletIdNum = parseInt(outlet_id, 10);
+        if (isNaN(outletIdNum)) {
+            res.status(400).json({ message: 'Invalid outlet_id' });
+            return;
+        }
+
+        const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
+        if (!outlet) {
+            res.status(404).json({ message: 'Outlet not found' });
+            return;
+        }
+
+        res.status(200).json(outlet);
+    } catch (error) {
+        console.error('Error retrieving outlet:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const editOutlet = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { outlet_id } = req.params;
+        const updatedData = req.body; // Ensure you're sending the correct fields from the frontend
+        console.log('EditOutlet - Updated data:', updatedData);
+        const outletIdNum = parseInt(outlet_id, 10);
+        if (isNaN(outletIdNum)) {
+            res.status(400).json({ message: 'Invalid outlet_id' });
+            return;
+        }
+
+        const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
+        if (!outlet) {
+            res.status(404).json({ message: 'outlet not found' });
+            return;
+        }
+
+        // Update voucher fields based on the provided data
+        outlet.outlet_name = updatedData.name;
+        outlet.location = updatedData.location;
+        outlet.description = updatedData.description;
+        outlet.contact = updatedData.contact;
+
+        await outlet.save();
+
+        res.status(200).json({ message: 'Outlet updated successfully', voucher: outlet });
+    } catch (error) {
+        console.error('Error updating outlet:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+
+}
 
 export const deleteOutlet = async (req: Request, res: Response): Promise<void> => {
 
