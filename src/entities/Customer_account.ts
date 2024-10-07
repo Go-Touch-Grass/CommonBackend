@@ -7,6 +7,8 @@ import {
 	PrimaryGeneratedColumn,
 	CreateDateColumn,
 	UpdateDateColumn,
+	ManyToMany,
+	JoinTable
 } from "typeorm";
 import { AbstractUser, UserRole } from "./abstract/AbstractUser";
 import { Avatar } from "./Avatar";
@@ -73,4 +75,46 @@ export class Customer_account extends AbstractUser {
 		(transaction) => transaction.customer_account
 	)
 	transactions: Customer_transaction[];
+
+	@ManyToMany(() => Customer_account)
+	@JoinTable({
+		name: "customer_friends",
+		joinColumn: {
+			name: "customer_id",
+			referencedColumnName: "id"
+		},
+		inverseJoinColumn: {
+			name: "friend_id",
+			referencedColumnName: "id"
+		}
+	})
+	friends: Customer_account[];
+
+	@ManyToMany(() => Customer_account)
+	@JoinTable({
+		name: "friend_requests",
+		joinColumn: {
+			name: "sender_id",
+			referencedColumnName: "id"
+		},
+		inverseJoinColumn: {
+			name: "receiver_id",
+			referencedColumnName: "id"
+		}
+	})
+	sentFriendRequests: Customer_account[];
+
+	@ManyToMany(() => Customer_account)
+	@JoinTable({
+		name: "friend_requests",
+		joinColumn: {
+			name: "receiver_id",
+			referencedColumnName: "id"
+		},
+		inverseJoinColumn: {
+			name: "sender_id",
+			referencedColumnName: "id"
+		}
+	})
+	receivedFriendRequests: Customer_account[];
 }
