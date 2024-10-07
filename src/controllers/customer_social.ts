@@ -30,33 +30,67 @@ export const sendFriendRequest = async (
 ): Promise<void> => {
 	try {
 		const userId = (req as any).user.id;
-		const { friendId } = req.body;
+		const { username } = req.body;
 
 		const sender = await Customer_account.findOne({
 			where: { id: userId },
-			relations: ["sentFriendRequests"],
+			relations: ["sentFriendRequests", "friends", "receivedFriendRequests"],
 		});
 		const receiver = await Customer_account.findOne({
-			where: { id: friendId },
-			relations: ["receivedFriendRequests"],
+			where: { username },
+			relations: ["receivedFriendRequests", "friends", "sentFriendRequests"],
 		});
 
 		if (!sender || !receiver) {
-			res.status(404).json({ message: "User not found" });
+			res.status(404).json({ message: "User not found :(" });
 			return;
 		}
 
-		if (
-			sender.sentFriendRequests.some(
-				(fr) => fr.id === receiver.id
-			)
-		) {
+		// Check if sender is trying to send a request to themselves
+		if (sender.id === receiver.id) {
 			res.status(400).json({
-				message: "Friend request already sent",
+				message: "You cannot send a friend request to yourself!",
 			});
 			return;
 		}
 
+		// Check if they are already friends
+		if (sender.friends.some((friend) => friend.id === receiver.id)) {
+			res.status(400).json({
+				message: "You are already friends with this user :)",
+			});
+			return;
+		}
+
+		// Check if sender has already sent a request to this receiver
+		if (sender.sentFriendRequests.some((fr) => fr.id === receiver.id)) {
+			res.status(400).json({
+				message: "Friend request already sent to this user.",
+			});
+			return;
+		}
+
+		// Check if there's a pending request from the receiver to the sender
+		if (sender.receivedFriendRequests.some((fr) => fr.id === receiver.id)) {
+			// Automatically accept the request
+			sender.friends.push(receiver);
+			receiver.friends.push(sender);
+
+			sender.receivedFriendRequests = sender.receivedFriendRequests.filter(
+				(fr) => fr.id !== receiver.id
+			);
+			receiver.sentFriendRequests = receiver.sentFriendRequests.filter(
+				(fr) => fr.id !== sender.id
+			);
+
+			await sender.save();
+			await receiver.save();
+
+			res.json({ message: "Friend request automatically accepted" });
+			return;
+		}
+
+		// If all checks pass, send the friend request
 		sender.sentFriendRequests.push(receiver);
 		receiver.receivedFriendRequests.push(sender);
 

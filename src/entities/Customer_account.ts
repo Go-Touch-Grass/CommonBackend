@@ -14,7 +14,7 @@ import { AbstractUser, UserRole } from "./abstract/AbstractUser";
 import { Avatar } from "./Avatar";
 import { Customer_transaction } from "./Customer_transaction";
 
-@Entity("Customer_account")
+@Entity("customer_account")
 export class Customer_account extends AbstractUser {
 	@PrimaryGeneratedColumn()
 	id: number;
