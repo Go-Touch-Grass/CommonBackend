@@ -84,10 +84,29 @@ export const updateAvatar = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if (baseId) avatar.base = await Item.findOneOrFail({ where: { id: baseId, type: ItemType.BASE } });
-        if (hatId) avatar.hat = await Item.findOneOrFail({ where: { id: hatId, type: ItemType.HAT } });
-        if (shirtId) avatar.shirt = await Item.findOneOrFail({ where: { id: shirtId, type: ItemType.SHIRT } });
-        if (bottomId) avatar.bottom = await Item.findOneOrFail({ where: { id: bottomId, type: ItemType.BOTTOM } });
+        // Update base (required item, cannot be unequipped)
+        if (baseId) {
+            avatar.base = await Item.findOneOrFail({ where: { id: baseId, type: ItemType.BASE } });
+        }
+
+        // Update optional items (can be unequipped by setting to null)
+        if (hatId === null) {
+            avatar.hat = null;
+        } else if (hatId) {
+            avatar.hat = await Item.findOneOrFail({ where: { id: hatId, type: ItemType.HAT } });
+        }
+
+        if (shirtId === null) {
+            avatar.shirt = null;
+        } else if (shirtId) {
+            avatar.shirt = await Item.findOneOrFail({ where: { id: shirtId, type: ItemType.SHIRT } });
+        }
+
+        if (bottomId === null) {
+            avatar.bottom = null;
+        } else if (bottomId) {
+            avatar.bottom = await Item.findOneOrFail({ where: { id: bottomId, type: ItemType.BOTTOM } });
+        }
 
         await avatar.save();
 

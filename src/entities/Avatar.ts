@@ -29,19 +29,19 @@ export class Avatar extends BaseEntity {
     @JoinColumn({ name: "business_id" })
     business: Business_account;
 
-    @ManyToOne(() => Item)
+    @ManyToOne(() => Item, { nullable: true })
     @JoinColumn({ name: "base_id" })
     base: Item;
 
-    @ManyToOne(() => Item)
+    @ManyToOne(() => Item, { nullable: true })
     @JoinColumn({ name: "hat_id" })
-    hat: Item;
+    hat: Item | null;
 
-    @ManyToOne(() => Item)
+    @ManyToOne(() => Item, { nullable: true })
     @JoinColumn({ name: "shirt_id" })
-    shirt: Item;
+    shirt: Item | null;
 
-    @ManyToOne(() => Item)
+    @ManyToOne(() => Item, { nullable: true })
     @JoinColumn({ name: "bottom_id" })
-    bottom: Item;
+    bottom: Item | null;
 }
