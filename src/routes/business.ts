@@ -26,10 +26,9 @@ import {
     getVoucher, 
     editVoucher, 
     deleteVoucher, 
-    searchVouchers,
+    searchVouchers, editOutlet, retrieveOutlet, editRegisterBusiness, updateSubscription,
     verifyTopUpBusiness,
 } from "../controllers/business";
-
 
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
 import { UserRole } from "../entities/abstract/AbstractUser";
@@ -54,10 +53,13 @@ router.get('/api/business/profile', authMiddleware([UserRole.BUSINESS]), retriev
 router.put('/api/business/profile', authMiddleware([UserRole.BUSINESS]), updateProfile);
 router.post('/api/business/profile/uploadImage', profileImageUpload.single('profileImage'), authMiddleware([UserRole.BUSINESS]), uploadProfileImage);
 
-
 router.post("/api/business/registerBusiness", proofBusinessUpload.single('proof'), authMiddleware([UserRole.BUSINESS]), registerBusiness);
+router.put('/api/business/editBusiness', authMiddleware([UserRole.BUSINESS]), editRegisterBusiness);
+
 //router.post('/api/business/outlets/:username', authMiddleware([UserRole.BUSINESS]), createOutlet);
 router.post('/api/business/outlets', authMiddleware([UserRole.BUSINESS]), createOutlet);
+router.get('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSINESS]), retrieveOutlet);
+router.put('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSINESS]), editOutlet);
 router.delete('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSINESS]), deleteOutlet);
 
 router.post("/api/business/create_voucher", authMiddleware([UserRole.BUSINESS]), createVoucher);
@@ -80,7 +82,5 @@ router.delete('/api/business/end_subscription', authMiddleware([UserRole.BUSINES
 router.put('/api/business/update_subscription/:subscriptionId', authMiddleware([UserRole.BUSINESS]), editSubscription)
 
 router.post('/api/business/verify_topup', authMiddleware([UserRole.BUSINESS]), verifyTopUpBusiness);
-
+router.put('/api/business/update_subscription', authMiddleware([UserRole.BUSINESS]), updateSubscription);
 export { router as businessRouter };
-
-
