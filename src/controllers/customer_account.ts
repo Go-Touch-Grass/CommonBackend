@@ -5,6 +5,132 @@ import bcrypt from "bcrypt";
 import { Avatar } from "../entities/Avatar";
 import { Customer_transaction } from "../entities/Customer_transaction";
 import { generateOTP, sendOTPEmail } from '../utils/otp';
+import { Customer_inventory } from "../entities/Customer_inventory";
+import { Business_voucher } from "../entities/Business_voucher";
+import { Voucher_transaction } from "../entities/Voucher_transaction";
+
+
+export const purchaseVoucher = async (req: Request, res: Response): Promise<void> => {
+    const userId = (req as any).user.id;
+    const { voucherId } = req.body; // Expecting voucherId in the request body
+
+    try {
+
+        const voucher = await Business_voucher.findOne({ where: { listing_id: voucherId } });
+
+        if (!voucher) {
+            res.status(404).json({ message: "Voucher not found" });
+            return;
+        }
+
+
+        const discountedPrice = voucher.price - (voucher.price * (voucher.discount / 100));
+
+
+        const conversionRate = 10;
+        const discountedPriceInGems = Math.round(discountedPrice * conversionRate);
+
+
+        const customer = await Customer_account.findOne({ where: { id: userId } });
+
+        if (!customer) {
+            res.status(404).json({ message: "Customer not found" });
+            return;
+        }
+
+        if (customer.gem_balance < discountedPriceInGems) {
+            res.status(400).json({ message: "Insufficient gem balance" });
+            return;
+        }
+
+
+        customer.gem_balance -= discountedPriceInGems;
+        await customer.save();
+
+
+        let inventory = await Customer_inventory.findOne({
+            where: { customer_account: { id: userId } },
+            relations: ["vouchers"],
+        });
+
+        if (!inventory) {
+
+            inventory = new Customer_inventory();
+            inventory.customer_account = customer;
+            await inventory.save();
+        }
+
+
+        voucher.customer_inventory = inventory;
+        await voucher.save();
+
+        inventory.vouchers.push(voucher);
+        await inventory.save();
+
+        const transaction = new Voucher_transaction();
+        transaction.voucher = voucher;  // Assign the voucher entity
+        transaction.gems_spent = discountedPriceInGems;
+        transaction.customerId = userId;
+        transaction.redeemed = true;
+        transaction.purchaseDate = new Date();  // Correct the date assignment
+        await transaction.save();
+        res.status(201).json({
+            message: "Voucher purchased successfully",
+            voucher: {
+                listing_id: voucher.listing_id,
+                name: voucher.name,
+                description: voucher.description,
+                original_price: voucher.price,
+                discount: voucher.discount,
+                discounted_price: discountedPrice,
+                discounted_price_in_gems: discountedPriceInGems,
+                duration: voucher.duration,
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+
+
+export const getVoucherInventory = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+
+        const customerAccount = await Customer_account.findOne({
+            where: { id: userId },
+            relations: ["customer_inventory", "customer_inventory.vouchers"], // Ensure vouchers are loaded
+        });
+
+        console.log('Fetched Customer Account:', JSON.stringify(customerAccount, null, 2));
+
+        if (!customerAccount || !customerAccount.customer_inventory) {
+            res.status(404).json({ status: 404, message: "User or inventory not found" });
+            return;
+        }
+
+        const inventory = customerAccount.customer_inventory;
+        console.log('Fetched Inventory:', JSON.stringify(inventory, null, 2));
+
+        if (!inventory.vouchers || inventory.vouchers.length === 0) {
+            res.status(404).json({ status: 404, message: "No vouchers found in inventory" });
+            return;
+        }
+
+        res.json({
+            status: 200,
+            vouchers: inventory.vouchers,
+        });
+    } catch (error) {
+        console.error('Error fetching vouchers:', error);
+        res.status(500).json({ status: 500, message: "Internal server error" });
+    }
+};
+
+
 
 
 // Function to calculate total XP required to reach a certain level
@@ -66,6 +192,13 @@ export const registerCustomer = async (
         });
 
         await customer_account.save();
+
+        const customer_inventory = Customer_inventory.create({
+            customer_account, // Link the inventory to the customer account
+        });
+
+        await customer_inventory.save();
+
 
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET is not defined");

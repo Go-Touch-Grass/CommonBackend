@@ -28,6 +28,8 @@ import './jobs/subscriptionReminderJob';
 
 
 import { Business_voucher } from "./entities/Business_voucher";
+import { Customer_inventory } from "./entities/Customer_inventory";
+import { Voucher_transaction } from "./entities/Voucher_transaction";
 
 
 
@@ -53,6 +55,8 @@ export const AppDataSource = new DataSource({
         Item,
         Avatar,
         Customer_transaction,
+        Customer_inventory,
+        Voucher_transaction
 
     ],
     synchronize: true,

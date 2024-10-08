@@ -1223,7 +1223,7 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
 
 export const createVoucher = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { name, description, price, discount, business_id, outlet_id } = req.body;
+        const { name, description, price, discount, duration, business_id, outlet_id } = req.body;
         const username = (req as any).user.username;
 
         const businessAccount = await Business_account.findOne({ where: { username }, relations: ['business', 'outlets'] });
@@ -1238,6 +1238,7 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
             description,
             price,
             discount,
+            duration
         });
 
         // If business_id is provided, associate with main business
