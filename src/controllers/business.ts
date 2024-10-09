@@ -1099,8 +1099,33 @@ export const editRegisterBusiness = async (req: Request, res: Response): Promise
     }
 };
 
+export const retrieveRegisterBusiness = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { registration_id } = req.params;
 
+        const businessRegistrationIdNum = parseInt(registration_id, 10);
+        if (isNaN(businessRegistrationIdNum)) {
+            res.status(400).json({ message: 'Invalid business_registration_id' });
+            return;
+        }
 
+        // Find the registered business associated with the business account
+        const registeredBusiness = await Business_register_business.findOne({
+            where: { registration_id : businessRegistrationIdNum },
+        });
+
+        if (!registeredBusiness) {
+            res.status(404).json({ message: 'Registered business not found' });
+            return;
+        }
+
+        // Send the registered business data as a response
+        res.status(200).json(registeredBusiness);
+    } catch (error) {
+        console.error('Error retrieving registered business:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
 
 
 export const createOutlet = async (req: Request, res: Response): Promise<void> => {
@@ -1117,12 +1142,16 @@ export const createOutlet = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
+        if (!business) {
+            res.status(404).json({ status: 404, message: 'Business account not found' });
+            return;
+        }
         const newOutlet = Outlet.create({
             outlet_name,
             location,
             contact,
             description,
-            business
+            business,
         });
 
         await newOutlet.save();
@@ -1156,7 +1185,38 @@ export const retrieveOutlet = async (req: Request, res: Response): Promise<void>
         res.status(500).json({ message: 'Internal server error' });
     }
 };
+/*
+export const retrieveOutletsByRegistrationId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { registration_id } = req.params;
 
+        // Ensure registration_id is a valid number
+        const registrationIdNum = parseInt(registration_id, 10);
+        if (isNaN(registrationIdNum)) {
+            res.status(400).json({ message: 'Invalid registration_id' });
+            return;
+        }
+
+        // Use getRepository to retrieve the Business_register_business
+        
+        const business = await Business_register_business.findOne({
+            where: { registration_id: registrationIdNum },
+            relations: ['outlets'] // Include outlets in the response
+        });
+
+        if (!business) {
+            res.status(404).json({ message: 'Business not found' });
+            return;
+        }
+
+        // Return the outlets associated with the found business
+        res.status(200).json(business.outlets);
+    } catch (error) {
+        console.error('Error retrieving outlets:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+*/
 export const editOutlet = async (req: Request, res: Response): Promise<void> => {
     try {
         const { outlet_id } = req.params;

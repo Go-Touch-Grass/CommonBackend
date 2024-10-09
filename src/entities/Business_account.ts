@@ -67,9 +67,11 @@ export class Business_account extends AbstractUser {
     @OneToMany(() => Business_transaction, business_transaction => business_transaction.business_account, { cascade: true, onDelete: "CASCADE" })
     transactions: Business_transaction[];
 
+    /*
     @OneToMany(() => Avatar, avatar => avatar.business)
     avatars: Avatar[];
-
+    */
+   
     @OneToMany(() => Item, item => item.business)
     items: Item[];
 }

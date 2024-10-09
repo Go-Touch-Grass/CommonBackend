@@ -2,7 +2,8 @@ import { BaseEntity, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGen
 import { Business_account } from "./Business_account";
 import { BusinessAccountSubscription } from "./Business_account_subscription";
 import { Business_voucher } from './Business_voucher';
-
+import { Avatar } from "./Avatar";
+import { Outlet } from "./Outlet"
 //Broadly speaking, there are 5 Retail Industry Areas covering a total of 18 Industry Sectors.
 /*
 Specialty Retailing: Floristry; Newsagents, Stationery & Bookshops; Community Pharmacy; Specialty Stores; Jewellery; Fashion, Clothing & Footwear
@@ -71,4 +72,13 @@ export class Business_register_business extends BaseEntity {
 
     @OneToMany(() => Business_voucher, voucher => voucher.business_register_business)
     vouchers: Business_voucher[];
+
+    @OneToOne(() => Avatar, (avatar) => avatar.business_register_business, { cascade: true })
+	@JoinColumn()
+	avatar: Avatar;
+
+    /*
+    @OneToMany(() => Outlet, outlet => outlet.business, { cascade: true, onDelete: "CASCADE" })//cascade delete
+    outlets: Outlet[];
+    */
 }
