@@ -27,7 +27,10 @@ const createOrGetUserStripeId = async (userId: number, userRole: UserRole): Prom
         // Create a new Stripe customer
         const stripeCustomer = await stripe.customers.create({
             email: user.email,
-            description: user.role === UserRole.BUSINESS ? 'Business account' : 'Customer account',
+            name: user.username,
+            description: user.role === UserRole.BUSINESS
+                ? `Business account for ${user.username}`
+                : `Customer account for ${user.username}`,
         });
         user.stripeId = stripeCustomer.id;
         await user.save();
@@ -61,3 +64,36 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getUserEmailandUsername = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+        const userRole = (req as any).user.role;
+        const user = await getUserFromDB(userId, userRole);
+
+        res.status(200).json({
+            email: user.email,
+            username: user.username,
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export const savePaymentMethodId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { paymentMethodId } = req.body;
+
+        const userId = (req as any).user.id;
+        const userRole = (req as any).user.role;
+        const user = await getUserFromDB(userId, userRole);
+
+        // Attach the payment method to the user
+        user.savedPaymentMethodId = paymentMethodId;
+        await user.save();
+
+        res.status(200).json({ message: 'Payment method saved successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
