@@ -161,8 +161,10 @@ const main = async () => {
         app.use(businessRouter);
 
         // Serve static files from the uploads folder
-        const uploadsPath = path.join(__dirname, '../uploads'); // For relative path
+        const uploadsPath = path.join(__dirname, './uploads'); // For relative path
         app.use('/uploads', express.static(uploadsPath));
+        //console.log("__dirname is", __dirname);
+        //console.log("upload file path is", uploadsPath);
 
         //app.use('/assets', express.static(path.join(__dirname, 'assets', 'sprites')));
         app.use(customerAccountRouter);

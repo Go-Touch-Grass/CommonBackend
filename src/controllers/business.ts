@@ -1099,10 +1099,6 @@ export const editRegisterBusiness = async (req: Request, res: Response): Promise
     }
 };
 
-
-
-
-
 export const createOutlet = async (req: Request, res: Response): Promise<void> => {
     try {
         //const { username } = req.params;
@@ -1232,13 +1228,23 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
+        // Check if req.file is defined
+        if (!req.file) {
+            res.status(400).json({
+                status: 400,
+                message: 'Voucher image is required'
+            });
+            return; // Exit the function early if no file is provided
+        }
+
         // Create a new voucher listing
         const newVoucher = Business_voucher.create({
             name,
             description,
             price,
             discount,
-            duration
+            duration,
+            voucherImage: `uploads/vouchers/${req.file.filename}`, // store relative path
         });
 
         // If business_id is provided, associate with main business
@@ -1273,10 +1279,18 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
 
 export const getAllVoucher = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { registration_id, outlet_id } = req.query;
+        const { registration_id, outlet_id, searchTerm } = req.query;
         //console.log('Received registration_id:', registration_id);
         //console.log('Received outlet_id:', outlet_id);
         let vouchers;
+        const query = Business_voucher.createQueryBuilder('voucher');
+
+        // Apply search term if present
+        if (searchTerm) {
+            query.andWhere('(voucher.name ILIKE :search OR voucher.description ILIKE :search)', {
+                search: `%${searchTerm}%`
+            });
+        }
 
         if (registration_id) {
             // Fetch vouchers for the main business
@@ -1292,10 +1306,16 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
                 res.status(404).json({ message: 'Business not found' });
                 return;
             }
+            /*
             vouchers = await Business_voucher.find({
                 where: { business_register_business: business, outlet: IsNull() },
                 relations: ['business_register_business']
             });
+            */
+
+            // Filter vouchers for the main business without an outlet
+            query.andWhere('voucher.business_register_business = :registrationId', { registrationId: registrationIdNum });
+            query.andWhere('voucher.outlet IS NULL'); // Ensure only vouchers without outlets are included
 
         } else if (outlet_id) {
             // Fetch vouchers for the specific outlet
@@ -1310,15 +1330,23 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
                 res.status(404).json({ message: 'Outlet not found' });
                 return;
             }
+            /*
             vouchers = await Business_voucher.find({ where: { outlet: outlet }, relations: ['outlet'] });
+            */
+            // Filter vouchers for the specific outlet
+            query.andWhere('voucher.outlet = :outletId', { outletId: outletIdNum });
+
         } else {
             res.status(400).json({ message: 'Please provide either business_id or outlet_id' });
             return;
         }
 
+        // Fetch the vouchers
+        vouchers = await query.getMany();
+
         // If no vouchers are found
         if (!vouchers || vouchers.length === 0) {
-            res.status(404).json({ message: 'No vouchers found' });
+            res.status(200).json({ message: 'No vouchers found' });
             return;
         }
 
@@ -1381,7 +1409,11 @@ export const editVoucher = async (req: Request, res: Response): Promise<void> =>
         voucher.description = updatedData.description;
         voucher.price = updatedData.price;
         voucher.discount = updatedData.discount;
-        voucher.voucherImage = updatedData.voucherImage;
+        // If a file is uploaded, update the voucherImage
+        if (req.file) {
+            voucher.voucherImage = `uploads/vouchers/${req.file.filename}`;
+        }
+
 
         await voucher.save();
 
@@ -1420,7 +1452,7 @@ export const deleteVoucher = async (req: Request, res: Response): Promise<void> 
     }
 };
 
-
+// Searchvoucher no longer in use, combined with getALlvouchers instead.
 export const searchVouchers = async (req: Request, res: Response): Promise<void> => {
     try {
         const { registration_id, outlet_id, searchTerm } = req.query;
@@ -1445,7 +1477,7 @@ export const searchVouchers = async (req: Request, res: Response): Promise<void>
         vouchers = await query.getMany();
 
         if (vouchers.length === 0) {
-            res.status(404).json({ message: 'No vouchers found' });
+            res.status(200).json({ message: 'No vouchers found' });
             return;
         }
 

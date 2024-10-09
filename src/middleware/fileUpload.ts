@@ -6,7 +6,7 @@ import fs from 'fs';
 // Create upload directories relative to the current directory
 const proofBusinessUploadDir = path.join(__dirname, '../uploads/proofOfBusiness');
 const profileImageUploadDir = path.join(__dirname, '../uploads/profileImages');
-
+const voucherUploadDir = path.join(__dirname, '../uploads/vouchers');
 
 // Ensure the directory exists
 if (!fs.existsSync(proofBusinessUploadDir)) {
@@ -15,6 +15,9 @@ if (!fs.existsSync(proofBusinessUploadDir)) {
 // Ensure the directory exists
 if (!fs.existsSync(profileImageUploadDir)) {
     fs.mkdirSync(profileImageUploadDir, { recursive: true }); // Create the directory if it doesn't exist
+}
+if (!fs.existsSync(voucherUploadDir)) {
+    fs.mkdirSync(voucherUploadDir, { recursive: true }); // Create the directory if it doesn't exist
 }
 
 // storage for proof of business
@@ -37,6 +40,16 @@ const proofBusinessStorage = multer.diskStorage({
 const profileImageStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, profileImageUploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
+});
+
+// storage for profile images
+const voucherStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, voucherUploadDir);
     },
     filename: (req, file, cb) => {
         cb(null, `${Date.now()}-${file.originalname}`);
@@ -79,7 +92,13 @@ const proofBusinessUpload = multer({
 
 const profileImageUpload = multer({
     storage: profileImageStorage,
-    fileFilter: profileImagefileFilter, //TO CHANGE
+    fileFilter: profileImagefileFilter,
+    limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+const voucherUpload = multer({
+    storage: voucherStorage,
+    fileFilter: profileImagefileFilter,
     limits: { fileSize: 5 * 1024 * 1024 }
 });
 
@@ -87,6 +106,7 @@ export { profileImageUpload }; // For profile image upload
 
 export default proofBusinessUpload; // For proof of business
 
+export { voucherUpload }; // For voucher upload
 
 /*
 const upload = multer({

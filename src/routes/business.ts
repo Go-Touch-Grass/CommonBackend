@@ -4,7 +4,7 @@ import { authMiddleware } from "../middleware/auth";
 
 import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, topUpGemsBusiness, getVoucher, editVoucher, deleteVoucher, searchVouchers, editOutlet, retrieveOutlet, editRegisterBusiness, updateSubscription } from "../controllers/business";
 
-import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
+import proofBusinessUpload, { profileImageUpload, voucherUpload } from "../middleware/fileUpload";
 import { UserRole } from "../entities/abstract/AbstractUser";
 
 
@@ -36,12 +36,10 @@ router.get('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSINESS
 router.put('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSINESS]), editOutlet);
 router.delete('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSINESS]), deleteOutlet);
 
-router.post("/api/business/create_voucher", authMiddleware([UserRole.BUSINESS]), createVoucher);
+router.post("/api/business/create_voucher", voucherUpload.single('voucherImage'), authMiddleware([UserRole.BUSINESS]), createVoucher);
 router.get("/api/business/vouchers", authMiddleware([UserRole.BUSINESS]), getAllVoucher);
-router.get("/api/business/vouchers/:listing_id", authMiddleware([UserRole.BUSINESS]), getVoucher
-);
-
-router.put("/api/business/vouchers/:listing_id", authMiddleware([UserRole.BUSINESS]), editVoucher);
+router.get("/api/business/vouchers/:listing_id", authMiddleware([UserRole.BUSINESS]), getVoucher);
+router.put("/api/business/vouchers/:listing_id", voucherUpload.single('voucherImage'), authMiddleware([UserRole.BUSINESS]), editVoucher);
 
 router.delete('/api/business/vouchers/:listing_id', authMiddleware([UserRole.BUSINESS]), deleteVoucher);
 router.get("/api/business/vouchers/search", authMiddleware([UserRole.BUSINESS]), searchVouchers);
