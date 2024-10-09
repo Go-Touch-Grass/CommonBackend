@@ -75,4 +75,12 @@ export class Business_account extends AbstractStripeUser {
    
     @OneToMany(() => Item, item => item.business)
     items: Item[];
+
+    @Column()
+    banStatus: boolean;
+
+    @Column({
+    nullable: true,
+    })
+    banRemarks: string; // reason for ban
 }

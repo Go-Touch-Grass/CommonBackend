@@ -736,6 +736,8 @@ export const createAccount = async (
       email,
       otp: hashedOTP,
       otpExpiresAt,
+      banStatus: false,
+      banRemarks: "",
     });
 
     await business.save();
@@ -972,6 +974,8 @@ export const retrieveProfile = async (
         username: businessAccount.username,
         profileImage: businessAccount.profileImage, // Return image path
         gem_balance: businessAccount.gem_balance,
+        banStatus: businessAccount.banStatus,
+        banRemarks: businessAccount.banRemarks
       },
       outlets: businessAccount.outlets,
       registeredBusiness: businessAccount.business,
