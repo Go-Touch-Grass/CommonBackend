@@ -10,18 +10,20 @@ import {
 	ManyToMany,
 	JoinTable
 } from "typeorm";
-import { AbstractUser, UserRole } from "./abstract/AbstractUser";
+import { UserRole } from "./abstract/AbstractUser";
 import { Avatar } from "./Avatar";
 import { Customer_transaction } from "./Customer_transaction";
+import { AbstractStripeUser } from "./abstract/AbstractStripeUser";
 
 @Entity("customer_account")
-export class Customer_account extends AbstractUser {
+export class Customer_account extends AbstractStripeUser {
 	@PrimaryGeneratedColumn()
 	id: number;
 
 	@Column()
 	fullName: string;
 
+	/* extended from AbstractUser
 	@Column({
 		unique: true,
 	})
@@ -34,6 +36,7 @@ export class Customer_account extends AbstractUser {
 
 	@Column()
 	password: string;
+	*/
 
 	@Column({ default: 0 })
 	exp: number;
