@@ -89,10 +89,68 @@ export const savePaymentMethodId = async (req: Request, res: Response): Promise<
         const user = await getUserFromDB(userId, userRole);
 
         // Attach the payment method to the user
-        user.savedPaymentMethodId = paymentMethodId;
+        user.paymentMethodId = paymentMethodId;
         await user.save();
 
         res.status(200).json({ message: 'Payment method saved successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export const getPaymentMethodId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+        const userRole = (req as any).user.role;
+        const user = await getUserFromDB(userId, userRole);
+
+        res.status(200).json({ paymentMethodId: user.paymentMethodId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export const deletePaymentMethodId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+        const userRole = (req as any).user.role;
+        const user = await getUserFromDB(userId, userRole);
+
+        // Detach the payment method from the user
+        user.paymentMethodId = null;
+        await user.save();
+
+        res.status(200).json({ message: 'Payment method deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export const getPaymentMethod = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+        const userRole = (req as any).user.role;
+        const user = await getUserFromDB(userId, userRole);
+
+        if (!user.stripeId || !user.paymentMethodId) {
+            // No saved payment method found, respond with an empty object
+            res.status(200).json({ message: 'No saved payment method found.' });
+            return;
+        }
+
+        const userStripeId = user.stripeId;
+        const paymentMethodId = user.paymentMethodId;
+
+        const paymentMethod = await stripe.customers.retrievePaymentMethod(userStripeId, paymentMethodId!);
+
+        // Check if the payment method exists
+        if (!paymentMethod) {
+            res.status(200).json({ message: 'No saved payment method found.' });
+            return;
+        }
+
+        // Respond with the payment method details
+        res.json(paymentMethod);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

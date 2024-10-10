@@ -11,6 +11,6 @@ export abstract class AbstractStripeUser extends AbstractUser {
     @Column({ nullable: true })
     stripeId: string;
 
-    @Column({ nullable: true })
-    savedPaymentMethodId: string;
+    @Column({ nullable: true, type: 'varchar' })
+    paymentMethodId: string | null;
 }
