@@ -3,10 +3,12 @@ import { Avatar, AvatarType } from '../entities/Avatar';
 import { Customer_account } from '../entities/Customer_account';
 import { Business_account } from '../entities/Business_account';
 import { Item, ItemType } from '../entities/Item';
+import { Business_register_business } from '../entities/Business_register_business';
+import { Outlet } from '../entities/Outlet';
 
 export const createAvatar = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { avatarType, baseId, hatId, shirtId, bottomId } = req.body;
+        const { avatarType, baseId, hatId, shirtId, bottomId, outletId } = req.body;
         const userId = (req as any).user.id; // Get user ID from authenticated request
 
         let avatar: Avatar;
@@ -17,15 +19,33 @@ export const createAvatar = async (req: Request, res: Response): Promise<void> =
                 avatarType,
                 customer,
             });
-            // Update the customer's avatar
             customer.avatar = avatar;
             await customer.save();
-        } else if (avatarType === AvatarType.BUSINESS) {
-            const business = await Business_account.findOneOrFail({ where: { business_id: userId } });
+
+        } else if (avatarType === AvatarType.BUSINESS_REGISTER_BUSINESS) {
+            // Ensure you are querying the business register entity and not Outlet
+            
+            const business_register_business = await Business_register_business.findOneOrFail({
+                where: { registration_id: userId }
+            });
+
             avatar = Avatar.create({
                 avatarType,
-                business,
+                business_register_business, // Associate avatar with the registered business
             });
+            business_register_business.avatar = avatar;
+            await business_register_business.save();
+
+        } else if (avatarType === AvatarType.OUTLET) {
+            // Query Outlet only when the avatarType is OUTLET
+            const outlet = await Outlet.findOneOrFail({ where: { outlet_id: outletId } });
+            avatar = Avatar.create({
+                avatarType,
+                outlet,
+            });
+            outlet.avatar = avatar;
+            await outlet.save();
+
         } else {
             res.status(400).json({ message: 'Invalid avatar type' });
             return;
@@ -57,7 +77,7 @@ export const getAvatarById = async (req: Request, res: Response): Promise<void> 
         const { id } = req.params;
         const avatar = await Avatar.findOne({
             where: { id: parseInt(id) },
-            relations: ['customer', 'business', 'base', 'hat', 'shirt', 'bottom']
+            relations: ['customer', 'business_register_business', 'outlet', 'base', 'hat', 'shirt', 'bottom']
         });
 
         if (!avatar) {
@@ -138,6 +158,52 @@ export const getAvatarByCustomerId = async (req: Request, res: Response): Promis
     }
 };
 
+export const getAvatarByBusinessRegistrationId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const registrationId  = req.params.registration_id;
+
+        const avatar = await Avatar.findOne({
+            where: { business_register_business: { registration_id: parseInt(registrationId) } },
+            relations: ['business_register_business', 'base', 'hat', 'shirt', 'bottom']
+        });
+
+        if (!avatar) {
+            res.status(404).json({ message: 'No avatar found for this business registration' });
+            return;
+        }
+
+        res.json(avatar);
+    } catch (error) {
+        console.error('Error fetching avatar by business registration ID:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const getAvatarByOutletId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const outletId  = req.params.outlet_id;
+
+        console.log('Received outletId:', outletId); // Debugging log
+
+        const avatar = await Avatar.findOne({
+            where: { outlet: { outlet_id: parseInt(outletId) } },
+            relations: ['outlet', 'base', 'hat', 'shirt', 'bottom']
+        });
+
+        if (!avatar) {
+            res.status(404).json({ message: 'No avatar found for this outlet' });
+            return;
+        }
+
+        res.json(avatar);
+    } catch (error) {
+        console.error('Error fetching avatar by outlet ID:', error.message || error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+
+/*
 export const getAvatarsByBusinessUsername = async (req: Request, res: Response): Promise<void> => {
     try {
         const { username } = req.params;
@@ -166,3 +232,4 @@ export const getAvatarsByBusinessUsername = async (req: Request, res: Response):
         res.status(500).json({ message: 'Internal server error' });
     }
 };
+*/
