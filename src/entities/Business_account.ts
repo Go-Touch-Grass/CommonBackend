@@ -65,6 +65,9 @@ export class Business_account extends AbstractStripeUser {
     @Column({ type: 'int', default: 0 })
     gem_balance: number; // Should not initialize here, default is set to 0
 
+    @Column({ type: 'int', default: 0 })
+    min_gem_balance: number; // Should not initialize here, default is set to 0
+
     @OneToMany(() => Business_transaction, business_transaction => business_transaction.business_account, { cascade: true, onDelete: "CASCADE" })
     transactions: Business_transaction[];
 
@@ -75,4 +78,12 @@ export class Business_account extends AbstractStripeUser {
    
     @OneToMany(() => Item, item => item.business)
     items: Item[];
+
+    @Column()
+    banStatus: boolean;
+
+    @Column({
+    nullable: true,
+    })
+    banRemarks: string; // reason for ban
 }

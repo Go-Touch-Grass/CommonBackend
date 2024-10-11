@@ -52,6 +52,41 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
     }
 }
 
+export const banUnbanBusiness = async (
+    req: Request,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const { business_id } = req.params;
+      const id = parseInt(business_id);
+      const { status, remarks } = req.body;
+      const business = await Business_account.findOne({
+        where: { business_id: id },
+      });
+  
+      if (!business) {
+        res.status(400).json({
+          status: 400,
+          message: "Business registration not found",
+        });
+        return;
+      }
+  
+      business.banStatus = status;
+      business.banRemarks = remarks;
+  
+      await business.save();
+  
+      res.status(200).json(business);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        status: 500,
+        message: "Failed to update business ban status",
+      });
+    }
+  };
+
 // Business-related business logic below
 
 export const getAllBusinesses = async (req: Request, res: Response): Promise<void> => {
