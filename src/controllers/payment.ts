@@ -155,3 +155,20 @@ export const getPaymentMethod = async (req: Request, res: Response): Promise<voi
         res.status(500).json({ error: error.message });
     }
 }
+
+export const getUserStripeIdAndEphemeralKey = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+        const userRole = (req as any).user.role;
+        const userStripeId = await createOrGetUserStripeId(userId, userRole);
+
+        const ephemeralKey = await stripe.ephemeralKeys.create(
+            { customer: userStripeId },
+            { apiVersion: '2024-06-20' }
+        );
+
+        res.status(200).json({ userStripeId, ephemeralKeySecret: ephemeralKey.secret });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
