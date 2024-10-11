@@ -90,6 +90,11 @@ export const editSubscription = async (
 
     // Deduct gems
     businessAccount.gem_balance -= total_gem;
+    const businessTransaction = Business_transaction.create({
+      gems_deducted: total_gem,
+      business_account: businessAccount,
+    });
+    await businessTransaction.save();
     await businessAccount.save();
 
     // Update subscription details
@@ -173,6 +178,11 @@ export const createSubscription = async (
     }
 
     businessAccount.gem_balance -= total_gem;
+    const businessTransaction = Business_transaction.create({
+      gems_deducted: total_gem,
+      business_account: businessAccount,
+    });
+    await businessTransaction.save();
     await businessAccount.save();
 
     const businessAccountSubscription = BusinessAccountSubscription.create({
@@ -429,7 +439,7 @@ export const checkExpiringSubscription = async (): Promise<void> => {
     }
 }
 
-cron.schedule('* * * * *', async () => {
+cron.schedule('*/20 * * * * *', async () => {
     console.log('Running automatic subscription renewal job...');
 
     try {
@@ -442,8 +452,8 @@ cron.schedule('* * * * *', async () => {
         });
 
         console.log(`Found ${expiringSubscriptions.length} expiring subscriptions for auto-renewal`);
-
         for (const subscription of expiringSubscriptions) {
+          
             // Ensure that business_register_business and business_account exist
             if (!subscription.business_register_business || !subscription.business_register_business.business_account) {
                 console.log(`Missing business_register_business or business_account for subscription: ${subscription.subscription_id}`);
@@ -474,15 +484,19 @@ cron.schedule('* * * * *', async () => {
             if (businessAccount.gem_balance >= total_gem) {
                 // Deduct gem balance
                 businessAccount.gem_balance -= total_gem;
+                const businessTransaction = Business_transaction.create({
+                  gems_deducted: total_gem,
+                  business_account: businessAccount,
+                });
+                await businessTransaction.save();
                 await businessAccount.save();
-
+              
                 // Extend expiration date
                 const newExpirationDate = new Date(subscription.expiration_date);
                 newExpirationDate.setMonth(newExpirationDate.getMonth() + subscription.duration);
                 subscription.expiration_date = newExpirationDate;
 
                 await subscription.save();
-
                 console.log(`Subscription ${subscription.subscription_id} renewed successfully`);
             } else {
                 console.log(`Not enough gems to renew subscription ${subscription.subscription_id}. Sending notification...`);
@@ -529,6 +543,8 @@ export const updateSubscription = async (req: Request, res: Response): Promise<v
         if (duration) existingSubscription.duration = duration;
         if (distance_coverage) existingSubscription.distance_coverage = distance_coverage;
         if (autoRenew !== undefined) existingSubscription.autoRenew = autoRenew;
+        associatedBusiness.min_gem_balance += Math.floor(existingSubscription.total_gem);
+        await associatedBusiness.save()
 
         // Save the updated subscription
         await existingSubscription.save();
@@ -954,7 +970,7 @@ export const retrieveProfile = async (
     // Find the business account by username and include related outlets
     const businessAccount = await Business_account.findOne({
       where: { username },
-      relations: ["outlets", "business"], // Assuming the relation is called 'outlets' in your entity
+      relations: ["outlets", "business", "transactions"], // Assuming the relation is called 'outlets' in your entity
     });
 
     if (!businessAccount) {
@@ -974,8 +990,10 @@ export const retrieveProfile = async (
         username: businessAccount.username,
         profileImage: businessAccount.profileImage, // Return image path
         gem_balance: businessAccount.gem_balance,
+        min_gem_balance: businessAccount.min_gem_balance,
         banStatus: businessAccount.banStatus,
-        banRemarks: businessAccount.banRemarks
+        banRemarks: businessAccount.banRemarks,
+        transactions: businessAccount.transactions
       },
       outlets: businessAccount.outlets,
       registeredBusiness: businessAccount.business,
@@ -1806,3 +1824,4 @@ export const verifyTopUpBusiness = async (
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+

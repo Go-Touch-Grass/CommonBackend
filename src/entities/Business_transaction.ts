@@ -18,7 +18,7 @@ export class Business_transaction extends BaseEntity {
     @CreateDateColumn()
     transaction_date: Date;
 
-    @Column()
+    @Column({nullable: true})
     stripe_payment_intent_id: string;
 
     @ManyToOne(() => Business_account, business_account => business_account.transactions)
