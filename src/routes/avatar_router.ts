@@ -10,7 +10,7 @@ router.get("/api/avatars/:id", authMiddleware([UserRole.CUSTOMER, UserRole.BUSIN
 router.put("/api/avatars/:id", authMiddleware([UserRole.CUSTOMER, UserRole.BUSINESS]), updateAvatar);
 router.get("/api/avatars/customer/:customerId", authMiddleware([UserRole.CUSTOMER]), getAvatarByCustomerId);
 //router.get("/api/business/avatars/:username", authMiddleware([UserRole.BUSINESS]), getAvatarsByBusinessUsername);
-router.get("/api/avatars/business/:registration_id", authMiddleware([UserRole.BUSINESS]), getAvatarByBusinessRegistrationId);
-router.get("/api/avatars/outlet/:outlet_id", authMiddleware([UserRole.BUSINESS]), getAvatarByOutletId);
+router.get("/api/avatars/business/:registration_id", authMiddleware([UserRole.CUSTOMER, UserRole.BUSINESS]), getAvatarByBusinessRegistrationId);
+router.get("/api/avatars/outlet/:outlet_id", authMiddleware([UserRole.CUSTOMER, UserRole.BUSINESS]), getAvatarByOutletId);
 
 export { router as avatarRouter };

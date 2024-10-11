@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { Avatar } from "../entities/Avatar";
 import { Customer_transaction } from "../entities/Customer_transaction";
+import { BusinessAccountSubscription } from '../entities/Business_account_subscription';
 import { generateOTP, sendOTPEmail } from '../utils/otp';
 import { stripe } from "../index";
 
@@ -552,3 +553,76 @@ export const verifyTopUpCustomer = async (req: Request, res: Response): Promise<
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
+
+export const getAllValidSubscription = async (req: Request, res: Response) => {
+    try {
+      // Fetch subscriptions with status 'active'
+      const activeSubscriptions = await BusinessAccountSubscription.find({
+        where: {
+          status: "active",
+        },
+        relations: ['business_register_business', 'business_register_business.avatar', 'outlet', 'outlet.avatar'], // Include related business, outlet, and avatars
+      });
+  
+      if (activeSubscriptions.length === 0) {
+        return res.status(404).json({ message: 'No active subscriptions found' });
+      }
+  
+      // Map the subscriptions to include the business or outlet details and avatar information
+      const subscriptionsWithAvatars = activeSubscriptions.map((subscription) => {
+        // Check if the subscription is for an outlet
+        const isOutlet = !!subscription.outlet;
+  
+        // If it's an outlet, fetch the outlet's avatar; otherwise, fetch the business avatar
+        const avatar = isOutlet 
+          ? subscription.outlet?.avatar 
+          : subscription.business_register_business?.avatar;
+  
+        return {
+          subscriptionId: subscription.subscription_id,
+          title: subscription.title,
+          description: subscription.description,
+          status: subscription.status,
+          expirationDate: subscription.expiration_date,
+          distanceCoverage: subscription.distance_coverage,
+          branch: isOutlet
+            ? {
+                entityType: 'Outlet',
+                outletId: subscription.outlet?.outlet_id,
+                outletName: subscription.outlet?.outlet_name,
+                location: subscription.outlet?.location,
+                avatar: avatar
+                  ? {
+                      avatarId: avatar.id,
+                      base: avatar.base,
+                      hat: avatar.hat,
+                      shirt: avatar.shirt,
+                      bottom: avatar.bottom,
+                    }
+                  : null,
+              }
+            : {
+                entityType: 'Business_register_business',
+                registrationId: subscription.business_register_business?.registration_id,
+                entityName: subscription.business_register_business?.entityName,
+                location: subscription.business_register_business?.location,
+                avatar: avatar
+                  ? {
+                      avatarId: avatar.id,
+                      base: avatar.base,
+                      hat: avatar.hat,
+                      shirt: avatar.shirt,
+                      bottom: avatar.bottom,
+                    }
+                  : null,
+              },
+        };
+      });
+  
+      return res.status(200).json(subscriptionsWithAvatars);
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+  

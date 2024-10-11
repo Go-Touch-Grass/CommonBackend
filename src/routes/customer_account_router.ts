@@ -10,6 +10,7 @@ import {
     verifyTopUpCustomer,
     verifyOTP,
     resendOTP,
+    getAllValidSubscription
 } from "../controllers/customer_account";
 import { UserRole } from '../entities/abstract/AbstractUser';
 import { updateCustomerAvatar } from "../controllers/customer_account";
@@ -28,5 +29,7 @@ router.post("/auth/change-password", authMiddleware([UserRole.CUSTOMER]), change
 router.post("/auth/update-avatar", authMiddleware([UserRole.CUSTOMER]), updateCustomerAvatar);
 
 router.post('/auth/verify-topUp', authMiddleware([UserRole.CUSTOMER]), verifyTopUpCustomer);
+
+router.get('/auth/subscription', authMiddleware([UserRole.CUSTOMER]), getAllValidSubscription);
 
 export { router as customerAccountRouter };
