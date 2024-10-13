@@ -26,7 +26,7 @@ import {
     editVoucher, 
     deleteVoucher, 
     searchVouchers, editOutlet, retrieveOutlet, editRegisterBusiness, updateSubscription,
-    verifyTopUpBusiness, retrieveRegisterBusiness
+    verifyTopUpBusiness, retrieveRegisterBusiness, getItemsByBusinessAccount
 } from "../controllers/business";
 
 import proofBusinessUpload, { profileImageUpload } from "../middleware/fileUpload";
@@ -84,5 +84,7 @@ router.put('/api/business/update_subscription/:subscriptionId', authMiddleware([
 
 router.post('/api/business/verify_topup', authMiddleware([UserRole.BUSINESS]), verifyTopUpBusiness);
 router.put('/api/business/update_subscription', authMiddleware([UserRole.BUSINESS]), updateSubscription);
+
+router.get('/api/business/items', authMiddleware([UserRole.BUSINESS]), getItemsByBusinessAccount);
 
 export { router as businessRouter };
