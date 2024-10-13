@@ -12,6 +12,121 @@ import { Between, getRepository, LessThanOrEqual } from 'typeorm';
 import { Business_voucher } from '../entities/Business_voucher';
 import { IsNull } from 'typeorm';
 import cron from 'node-cron';
+import { Voucher_transaction } from '../entities/Voucher_transaction';
+import { Customer_account } from '../entities/Customer_account';
+import { Customer_inventory } from '../entities/Customer_inventory';
+
+export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { transactionId, redeemed } = req.body;
+        const transactionIdNum = parseInt(transactionId, 10);
+
+        if (isNaN(transactionIdNum)) {
+            res.status(400).json({ message: 'Invalid transaction ID' });
+            return;
+        }
+
+        const transaction = await Voucher_transaction.findOne({
+            where: { id: transactionIdNum },
+            relations: ['voucher'], // Load the associated voucher
+        });
+
+        if (!transaction || !transaction.voucher) {
+            res.status(404).json({ message: 'Voucher transaction or associated voucher not found' });
+            return;
+        }
+
+        if (transaction.used) {
+            res.status(400).json({ message: 'Voucher transaction already redeemed' });
+            return;
+        }
+
+        // Mark the transaction as used
+        transaction.used = redeemed;
+
+        // If the voucher is being redeemed, find the corresponding customer inventory
+        const customerInventory = await Customer_inventory.findOne({
+            where: { customer_account: { id: transaction.customerId } }, // Use an object to reference the customer account
+            relations: ['vouchers'], // Load associated vouchers
+        });
+
+        if (customerInventory) {
+            // Check if the customer inventory has the voucher in its collection
+            const hasVoucher = customerInventory.vouchers.some(v => v.listing_id === transaction.voucher.listing_id);
+
+            if (hasVoucher) {
+                customerInventory.used = true; // Mark inventory as used
+                await customerInventory.save(); // Save the updated inventory
+            }
+        }
+
+        await transaction.save(); // Save the updated transaction
+
+        res.status(200).json({
+            message: 'Voucher transaction redeemed successfully',
+            transaction: {
+                id: transaction.id,
+                used: transaction.used,
+                customerId: transaction.customerId,
+                voucherId: transaction.voucherId,
+            },
+        });
+    } catch (error) {
+        console.error('Error updating voucher transaction status:', error.message);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+
+
+
+
+export const getVoucherTransactions = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { listing_id } = req.params;
+
+        // Convert listing_id to a number
+        const voucherIdNum = parseInt(listing_id, 10);
+        if (isNaN(voucherIdNum)) {
+            res.status(400).json({ message: 'Invalid listing_id' });
+            return;
+        }
+
+        // Fetch transactions with the voucher relationship
+        const transactions = await Voucher_transaction.find({
+            where: { voucherId: voucherIdNum, used: false }, // Use the numeric voucherId
+            relations: ['voucher'], // Include voucher details
+        });
+
+        const customers = await Customer_account.find(); // Fetch all customers
+        const customerMap = customers.reduce((acc, customer) => {
+            acc[customer.id] = customer.fullName;
+            return acc;
+        }, {});
+
+        const response = transactions.map(transaction => ({
+            id: transaction.id,
+            voucherId: transaction.voucher.listing_id,
+            voucherName: transaction.voucher.name,
+            customerId: transaction.customerId,
+            customerName: customerMap[transaction.customerId] || 'Unknown',
+            purchaseDate: transaction.purchaseDate,
+            expirationDate: transaction.voucher.expirationDate.toISOString(),
+            amountSpent: transaction.gems_spent,
+            redeemed: transaction.redeemed,
+            //businessId: transaction.voucher.business_register_business ? transaction.voucher.business_register_business.registration_id : null,  // Include business ID
+            //businessName: transaction.voucher.business_register_business ? transaction.voucher.business_register_business.entityName : 'Unknown',
+            //outletId: transaction.voucher.outlet ? transaction.voucher.outlet.outlet_id : null,  // Include outlet ID
+            //outletName: transaction.voucher.outlet ? transaction.voucher.outlet.outlet_name : 'Unknown',  // Include outlet name
+        }));
+
+        res.status(200).json({ transactions: response });
+    } catch (error) {
+        console.error('Error fetching transactions:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 
 export const editSubscription = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -152,6 +267,12 @@ export const createSubscription = async (req: Request, res: Response): Promise<v
         });
 
         await businessAccountSubscription.save();
+
+        const businessRegisterBusiness = businessAccount.business; // Assuming businessAccount.business is the Business_register_business entity
+        if (businessRegisterBusiness) {
+            businessRegisterBusiness.hasSubscriptionPlan = true; // Set the field to true
+            await businessRegisterBusiness.save(); // Save the change
+        }
 
         res.status(201).json(businessAccountSubscription);
     } catch (error) {
@@ -347,7 +468,7 @@ export const checkExpiringSubscription = async (): Promise<void> => {
     }
 }
 
-cron.schedule('* * * * *', async () => {
+cron.schedule('*/20 * * * * *', async () => {
     console.log('Running automatic subscription renewal job...');
 
     try {
@@ -404,7 +525,7 @@ cron.schedule('* * * * *', async () => {
                 console.log(`Subscription ${subscription.subscription_id} renewed successfully`);
             } else {
                 console.log(`Not enough gems to renew subscription ${subscription.subscription_id}. Sending notification...`);
-                // Notification logic can be added here
+
             }
         }
     } catch (error) {
@@ -1033,6 +1154,7 @@ export const registerBusiness = async (req: Request, res: Response): Promise<voi
             proof: `uploads/proofOfBusiness/${req.file.filename}`, // store relative path
             status: 'pending',
             remarks: "",
+            hasSubscriptionPlan: false,
             business_account: businessAccount // Link the business_account entity to business_register_business
         });
 

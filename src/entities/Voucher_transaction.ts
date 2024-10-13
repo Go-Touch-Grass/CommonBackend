@@ -22,6 +22,9 @@ export class Voucher_transaction extends BaseEntity {
     @Column({ type: "int" })
     gems_spent: number;
 
+    @Column({ default: false })
+    used: boolean;
+
     // Define the relationship with Voucher
     @ManyToOne(() => Business_voucher, voucher => voucher.transactions)
     @JoinColumn({ name: 'voucherId' })

@@ -7,6 +7,9 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
     BaseEntity,
+    Column,
+    ManyToMany,
+    JoinTable,
 } from "typeorm";
 import { Business_voucher } from "./Business_voucher";
 import { Customer_account } from "./Customer_account";
@@ -27,8 +30,21 @@ export class Customer_inventory extends BaseEntity {
     })
     customer_account: Customer_account;
 
+    @Column({ default: false })
+    used: boolean;
 
-    // One inventory can have many vouchers
-    @OneToMany(() => Business_voucher, (voucher) => voucher.customer_inventory)
+    @ManyToMany(() => Business_voucher, { cascade: true })
+    @JoinTable({
+        name: 'customer_vouchers', // Junction table name
+        joinColumn: {
+            name: 'inventory_id',
+            referencedColumnName: 'id',
+        },
+        inverseJoinColumn: {
+            name: 'voucher_id',
+            referencedColumnName: 'listing_id',
+        },
+    })
     vouchers: Business_voucher[];
+
 }

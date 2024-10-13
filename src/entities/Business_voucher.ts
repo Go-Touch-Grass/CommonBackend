@@ -9,6 +9,8 @@ import {
     UpdateDateColumn,
     BeforeInsert,
     OneToMany,
+    ManyToMany,
+    JoinTable,
 } from "typeorm";
 import { Business_register_business } from './Business_register_business';
 import { Outlet } from './Outlet';
@@ -73,9 +75,25 @@ export class Business_voucher extends BaseEntity {
     outlet: Outlet;
 
     // A voucher can belong to a customer's inventory
-    @ManyToOne(() => Customer_inventory, customer_inventory => customer_inventory.vouchers, { onDelete: 'CASCADE' })
+    /*@ManyToOne(() => Customer_inventory, customer_inventory => customer_inventory.vouchers, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'inventory_id' })
-    customer_inventory: Customer_inventory;
+    customer_inventory: Customer_inventory;*/
+
+    /*
+    @ManyToMany(() => Customer_inventory, (customer_inventory) => customer_inventory.vouchers)
+    @JoinTable({
+        name: 'customer_vouchers', // Junction table name
+        joinColumn: {
+            name: 'voucher_id',  // Corrected, it should be voucher_id as per the column in Business_voucher
+            referencedColumnName: 'listing_id',  // listing_id is the primary key of Business_voucher
+        },
+        inverseJoinColumn: {
+            name: 'inventory_id',  // inventory_id is the primary key of Customer_inventory
+            referencedColumnName: 'id',
+        },
+    })
+    customer_inventory: Customer_inventory[];
+    */
 
     @OneToMany(() => Voucher_transaction, transaction => transaction.voucher)
     transactions: Voucher_transaction[];

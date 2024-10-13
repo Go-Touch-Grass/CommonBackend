@@ -2,10 +2,11 @@ import express from "express";
 import { authMiddleware } from "../middleware/auth";
 
 
-import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, topUpGemsBusiness, getVoucher, editVoucher, deleteVoucher, searchVouchers, editOutlet, retrieveOutlet, editRegisterBusiness, updateSubscription } from "../controllers/business";
+import { createAccount, createOutlet, deleteAccount, deleteOutlet, loginAccount, logoutAccount, registerBusiness, resendOTP, retrieveProfile, updateProfile, uploadProfileImage, verifyOTP, viewSubscription, renewSubscription, createSubscription, createOutletSubscription, endSubscription, editSubscription, createVoucher, getAllVoucher, topUpGemsBusiness, getVoucher, editVoucher, deleteVoucher, searchVouchers, editOutlet, retrieveOutlet, editRegisterBusiness, updateSubscription, getVoucherTransactions, updateVoucherTransactionStatus } from "../controllers/business";
 
 import proofBusinessUpload, { profileImageUpload, voucherUpload } from "../middleware/fileUpload";
 import { UserRole } from "../entities/abstract/AbstractUser";
+
 
 
 const router = express.Router();
@@ -43,6 +44,8 @@ router.put("/api/business/vouchers/:listing_id", voucherUpload.single('voucherIm
 
 router.delete('/api/business/vouchers/:listing_id', authMiddleware([UserRole.BUSINESS]), deleteVoucher);
 router.get("/api/business/vouchers/search", authMiddleware([UserRole.BUSINESS]), searchVouchers);
+router.get('/api/business/vouchers/:listing_id/transactions', authMiddleware([UserRole.BUSINESS]), getVoucherTransactions);
+router.put('/api/business/redeem', updateVoucherTransactionStatus);
 
 
 router.delete('/api/business/account', authMiddleware([UserRole.BUSINESS]), deleteAccount);
