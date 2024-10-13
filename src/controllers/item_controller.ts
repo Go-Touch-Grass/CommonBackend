@@ -32,10 +32,15 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
 
 export const getItems = async (req: Request, res: Response): Promise<void> => {
     try {
-        const items = await Item.find({ where: { approved: true } });
+        const items = await Item.find({ 
+            where: { 
+                approved: true,
+                rejected: false
+            } 
+        });
         res.json(items);
     } catch (error) {
-        console.error('Error fetching approved items:', error);
+        console.error('Error fetching approved and non-rejected items:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
@@ -97,6 +102,7 @@ export const createCustomItem = async (req: Request, res: Response): Promise<voi
             type,
             filepath: fileUrl,
             approved: false,
+            rejected: false,
             scale: scale || null,
             xOffset: xOffset || null,
             yOffset: yOffset || null,

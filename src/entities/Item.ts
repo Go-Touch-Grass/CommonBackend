@@ -29,6 +29,9 @@ export class Item extends BaseEntity {
     @Column({ default: false })
     approved: boolean;
 
+    @Column({ default: false })
+    rejected: boolean;
+
     @ManyToOne(() => Business_register_business, business => business.items, { nullable: true })
     @JoinColumn({ name: 'registration_id' })
     business_register_business: Business_register_business;
