@@ -4,6 +4,7 @@ import { BusinessAccountSubscription } from "./Business_account_subscription";
 import { Business_voucher } from './Business_voucher';
 import { Avatar } from "./Avatar";
 import { Outlet } from "./Outlet"
+import { Item } from "./Item"; // Add this import
 //Broadly speaking, there are 5 Retail Industry Areas covering a total of 18 Industry Sectors.
 /*
 Specialty Retailing: Floristry; Newsagents, Stationery & Bookshops; Community Pharmacy; Specialty Stores; Jewellery; Fashion, Clothing & Footwear
@@ -76,6 +77,9 @@ export class Business_register_business extends BaseEntity {
     @OneToOne(() => Avatar, (avatar) => avatar.business_register_business, { cascade: true })
 	@JoinColumn()
 	avatar: Avatar;
+
+    @OneToMany(() => Item, item => item.business_register_business)
+    items: Item[];
 
     /*
     @OneToMany(() => Outlet, outlet => outlet.business, { cascade: true, onDelete: "CASCADE" })//cascade delete

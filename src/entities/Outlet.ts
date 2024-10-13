@@ -4,7 +4,7 @@ import { BusinessAccountSubscription } from "./Business_account_subscription";
 import { Business_voucher } from './Business_voucher';
 import { Avatar } from "./Avatar";
 import { Business_register_business } from "./Business_register_business";
-
+import { Item } from "./Item";
 @Entity('outlet')
 export class Outlet extends BaseEntity {
     @PrimaryGeneratedColumn()
@@ -38,6 +38,9 @@ export class Outlet extends BaseEntity {
     @OneToOne(() => Avatar, (avatar) => avatar.outlet, { cascade: true })
 	@JoinColumn()
 	avatar: Avatar;
+
+    @OneToMany(() => Item, item => item.outlet)
+    items: Item[];
 
     /*@ManyToOne(() => Business_register_business, business_register_business => business_register_business.outlets)
     @JoinColumn({
