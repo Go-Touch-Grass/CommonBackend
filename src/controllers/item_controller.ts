@@ -5,6 +5,8 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { Business_register_business } from '../entities/Business_register_business';
 import { Outlet } from '../entities/Outlet';
+import axios from 'axios';
+import fs from 'fs';
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -65,21 +67,35 @@ export const createCustomItem = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        // Upload image to Cloudinary
-        const result = await cloudinary.uploader.upload(file.path, {
-            public_id: `custom_items/${uuidv4()}`,
-            tags: ['custom_item'],
-            transformation: [
-                { width: scale, height: scale, crop: 'scale' },
-                { x: xOffset, y: yOffset }
-            ]
-        });
+        // Generate a unique filename
+        const filename = `${uuidv4()}_${file.originalname}`;
+
+        // Read the file content
+        const fileContent = fs.readFileSync(file.path, { encoding: 'base64' });
+
+        // Upload file to GitHub
+        const githubResponse = await axios.put(
+            `https://api.github.com/repos/yellowth/sprites_fork/contents/custom_items/${filename}`,
+            {
+                message: 'Upload custom item',
+                content: fileContent,
+            },
+            {
+                headers: {
+                    Authorization: `token ${process.env.GITHUB_TOKEN}`,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+
+        // Get the raw URL of the uploaded file
+        const fileUrl = `https://raw.githubusercontent.com/yellowth/sprites_fork/main/custom_items/${filename}`;
 
         // Create new item entity
         const item = Item.create({
             name,
             type,
-            filepath: result.secure_url,
+            filepath: fileUrl,
             approved: false,
         });
 
@@ -103,6 +119,9 @@ export const createCustomItem = async (req: Request, res: Response): Promise<voi
         }
 
         await item.save();
+
+        // Delete the temporary file
+        fs.unlinkSync(file.path);
 
         res.status(201).json(item);
     } catch (error) {
