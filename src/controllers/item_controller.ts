@@ -97,6 +97,9 @@ export const createCustomItem = async (req: Request, res: Response): Promise<voi
             type,
             filepath: fileUrl,
             approved: false,
+            scale: scale || null,
+            xOffset: xOffset || null,
+            yOffset: yOffset || null,
         });
 
         if (businessRegistrationId) {

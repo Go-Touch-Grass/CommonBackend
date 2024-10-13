@@ -36,4 +36,13 @@ export class Item extends BaseEntity {
     @ManyToOne(() => Outlet, outlet => outlet.items, { nullable: true })
     @JoinColumn({ name: 'outlet_id' })
     outlet: Outlet;
+
+    @Column({ type: 'float', nullable: true })
+    scale: number;
+
+    @Column({ type: 'float', nullable: true })
+    xOffset: number;
+
+    @Column({ type: 'float', nullable: true })
+    yOffset: number;
 }
