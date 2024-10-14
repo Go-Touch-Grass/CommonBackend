@@ -65,7 +65,7 @@ router.delete('/api/business/outlets/:outlet_id', authMiddleware([UserRole.BUSIN
 //router.get('/api/business/outlets/:registration_id', authMiddleware([UserRole.BUSINESS]), retrieveOutletsByRegistrationId);
 
 router.post("/api/business/create_voucher", voucherUpload.single('voucherImage'), authMiddleware([UserRole.BUSINESS]), createVoucher);
-router.get("/api/business/vouchers", authMiddleware([UserRole.BUSINESS]), getAllVoucher);
+router.get("/api/business/vouchers", authMiddleware([UserRole.CUSTOMER, UserRole.BUSINESS]), getAllVoucher);
 router.get("/api/business/vouchers/:listing_id", authMiddleware([UserRole.BUSINESS]), getVoucher);
 router.put("/api/business/vouchers/:listing_id", voucherUpload.single('voucherImage'), authMiddleware([UserRole.BUSINESS]), editVoucher);
 
