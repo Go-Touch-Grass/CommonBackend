@@ -3,7 +3,7 @@ import { Item, ItemType } from '../entities/Item';
 import cloudinary from '../config/cloudinary';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
-import { Business_register_business } from '../entities/Business_register_business';
+import { Business_register_business, statusEnum } from '../entities/Business_register_business';
 import { Outlet } from '../entities/Outlet';
 import axios from 'axios';
 import fs from 'fs';
@@ -18,7 +18,7 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
             name,
             type,
             filepath,
-            approved: approved || false
+            status: statusEnum.PENDING
         });
 
         await item.save();
@@ -34,8 +34,7 @@ export const getItems = async (req: Request, res: Response): Promise<void> => {
     try {
         const items = await Item.find({ 
             where: { 
-                approved: true,
-                rejected: false
+                status:statusEnum.APPROVED
             } 
         });
         res.json(items);
@@ -101,8 +100,7 @@ export const createCustomItem = async (req: Request, res: Response): Promise<voi
             name,
             type,
             filepath: fileUrl,
-            approved: false,
-            rejected: false,
+            status:statusEnum.PENDING,
             scale: scale || null,
             xOffset: xOffset || null,
             yOffset: yOffset || null,

@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import { Business_account } from '../entities/Business_account';
 import { Business_register_business, statusEnum } from '../entities/Business_register_business';
 import { Customer_account } from '../entities/Customer_account';
+import { Item } from '../entities/Item'
 
 export const loginAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -261,6 +262,79 @@ export const getCustomerTransactionsByCustomerId = async (req: Request, res: Res
         res.status(500).json({
             status: 500,
             message: 'Failed to fetch customer transactions'
+        });
+    }
+}
+
+export const getAllPendingItemRequests = async (req: Request, res: Response): Promise<void> => {
+    try{
+        const pendingItemRequests = await Item.find({ 
+            where: { status: statusEnum.PENDING }, // Fetch all pending item requests
+        });
+        res.status(200).json(pendingItemRequests);
+
+    }catch(error){
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to fetch item requests'
+        });
+    }
+}
+
+export const getItemRequestById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const requestId = parseInt(id);
+        const item = await Item.findOne({
+            where: { id: requestId },
+            //relations: ['transactions']  
+        });
+
+        if (!item) {
+            res.status(400).json({
+                status: 400,
+                message: 'Item not found'
+            });
+            return;
+        }
+
+        res.status(200).json(item);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to fetch item'
+        });
+    }
+}
+
+export const reviewPendingRequestById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const requestId = parseInt(id);
+        const { status, remarks } = req.body;
+        const pendingItemRequest = await Item.findOneBy({ id: requestId }); 
+
+        if (!pendingItemRequest) {
+            res.status(400).json({
+                status: 400,
+                message: 'Item Request not found'
+            });
+            return;
+        }
+
+        pendingItemRequest.status = status;
+        pendingItemRequest.remarks = remarks;
+
+        await pendingItemRequest.save();
+
+        res.status(200).json(pendingItemRequest);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to update item request'
         });
     }
 }
