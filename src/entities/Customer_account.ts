@@ -15,6 +15,7 @@ import { Avatar } from "./Avatar";
 import { Customer_transaction } from "./Customer_transaction";
 import { AbstractStripeUser } from "./abstract/AbstractStripeUser";
 import { Item } from "./Item";
+import { Customer_inventory } from "./Customer_inventory";
 
 @Entity("customer_account")
 export class Customer_account extends AbstractStripeUser {
@@ -135,4 +136,13 @@ export class Customer_account extends AbstractStripeUser {
 		}
 	})
 	ownedItems: Item[];
+
+
+
+	@OneToOne(() => Customer_inventory, (customer_inventory) => customer_inventory.customer_account, {
+		onDelete: "CASCADE",
+	})
+	@JoinColumn({ name: "customer_id" }) // Ensure this is set correctly
+	customer_inventory: Customer_inventory;
+
 }

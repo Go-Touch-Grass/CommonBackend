@@ -27,6 +27,8 @@ import { customerSocialRouter } from "./routes/customer_social_router";
 import "./jobs/subscriptionReminderJob";
 
 import { Business_voucher } from "./entities/Business_voucher";
+import { Customer_inventory } from "./entities/Customer_inventory";
+import { Voucher_transaction } from "./entities/Voucher_transaction";
 
 dotenv.config();
 
@@ -49,6 +51,8 @@ export const AppDataSource = new DataSource({
 		Item,
 		Avatar,
 		Customer_transaction,
+		Customer_inventory,
+		Voucher_transaction
 	],
 	synchronize: true,
 });
@@ -210,12 +214,12 @@ const main = async () => {
 			})
 		);
 		/*
-        app.use(
-            cors({
-                origin: "http://localhost:3000",
-            })
-        );
-        */
+		app.use(
+			cors({
+				origin: "http://localhost:3000",
+			})
+		);
+		*/
 
 		console.log("Connected to Postgres");
 
@@ -224,8 +228,10 @@ const main = async () => {
 		app.use(businessRouter);
 
 		// Serve static files from the uploads folder
-		const uploadsPath = path.join(__dirname, "../uploads"); // For relative path
-		app.use("/uploads", express.static(uploadsPath));
+		const uploadsPath = path.join(__dirname, './uploads'); // For relative path
+		app.use('/uploads', express.static(uploadsPath));
+		//console.log("__dirname is", __dirname);
+		//console.log("upload file path is", uploadsPath);
 
 		//app.use('/assets', express.static(path.join(__dirname, 'assets', 'sprites')));
 		app.use(customerAccountRouter);

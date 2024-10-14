@@ -62,6 +62,10 @@ export class Business_register_business extends BaseEntity {
     })
     remarks: string; // reason for rejection
 
+    @Column({ default: false })
+    hasSubscriptionPlan: boolean;
+
+
     @OneToOne(() => Business_account, business_account => business_account.business)
     @JoinColumn({
         name: "business_id"

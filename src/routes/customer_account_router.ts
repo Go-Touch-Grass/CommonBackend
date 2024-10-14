@@ -10,7 +10,10 @@ import {
     verifyTopUpCustomer,
     verifyOTP,
     resendOTP,
-    getAllValidSubscription
+    getAllValidSubscription,
+    getVoucherInventory,
+    purchaseVoucher,
+    redeemVoucherTransaction,
 } from "../controllers/customer_account";
 import { UserRole } from '../entities/abstract/AbstractUser';
 import { updateCustomerAvatar } from "../controllers/customer_account";
@@ -32,4 +35,9 @@ router.post('/auth/verify-topUp', authMiddleware([UserRole.CUSTOMER]), verifyTop
 
 router.get('/auth/subscription', authMiddleware([UserRole.CUSTOMER]), getAllValidSubscription);
 
+
+//router.post('/auth/top_up_gems', authMiddleware([UserRole.CUSTOMER]), topUpGemsCustomer);
+router.get('/auth/view_voucher_inventory', authMiddleware([UserRole.CUSTOMER]), getVoucherInventory);
+router.post("/auth/vouchers", authMiddleware([UserRole.CUSTOMER]), purchaseVoucher);
+router.put('/auth/voucher/redeem/:transactionId', redeemVoucherTransaction);
 export { router as customerAccountRouter };
