@@ -591,6 +591,7 @@ export const getAllValidSubscription = async (req: Request, res: Response) => {
                 outletId: subscription.outlet?.outlet_id,
                 outletName: subscription.outlet?.outlet_name,
                 location: subscription.outlet?.location,
+                description: subscription.outlet?.description,
                 avatar: avatar
                   ? {
                       avatarId: avatar.id,
@@ -606,6 +607,7 @@ export const getAllValidSubscription = async (req: Request, res: Response) => {
                 registrationId: subscription.business_register_business?.registration_id,
                 entityName: subscription.business_register_business?.entityName,
                 location: subscription.business_register_business?.location,
+                category: subscription.business_register_business?.category,
                 avatar: avatar
                   ? {
                       avatarId: avatar.id,
