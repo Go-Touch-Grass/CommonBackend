@@ -17,6 +17,7 @@ import { Business_voucher } from "../entities/Business_voucher";
 import { IsNull } from "typeorm";
 import { stripe } from "../index";
 import cron from 'node-cron';
+import { Item } from '../entities/Item';
 
 export const editSubscription = async (
   req: Request,
@@ -1823,5 +1824,42 @@ export const verifyTopUpBusiness = async (
     console.error("Error verifying payment and topping up gems:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
+};
+
+export const getItemsByBusinessAccount = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { username } = req.params;
+
+        // Find the business account
+        const businessAccount = await Business_account.findOne({
+            where: { username },
+            relations: ['business', 'outlets']
+        });
+
+        if (!businessAccount) {
+            res.status(404).json({ message: 'Business account not found' });
+            return;
+        }
+
+        // Get items associated with the main business
+        const businessItems = await Item.find({
+            where: { business_register_business: businessAccount.business },
+            relations: ['business_register_business']
+        });
+
+        // Get items associated with all outlets
+        const outletItems = await Item.createQueryBuilder('item')
+            .innerJoinAndSelect('item.outlet', 'outlet')
+            .where('outlet.business = :businessId', { businessId: businessAccount.business_id })
+            .getMany();
+
+        // Combine all items
+        const allItems = [...businessItems, ...outletItems];
+
+        res.status(200).json(allItems);
+    } catch (error) {
+        console.error('Error fetching items for business account:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 };
 

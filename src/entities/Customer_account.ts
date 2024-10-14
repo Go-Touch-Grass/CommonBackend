@@ -14,6 +14,7 @@ import { UserRole } from "./abstract/AbstractUser";
 import { Avatar } from "./Avatar";
 import { Customer_transaction } from "./Customer_transaction";
 import { AbstractStripeUser } from "./abstract/AbstractStripeUser";
+import { Item } from "./Item";
 
 @Entity("customer_account")
 export class Customer_account extends AbstractStripeUser {
@@ -120,4 +121,18 @@ export class Customer_account extends AbstractStripeUser {
 		}
 	})
 	receivedFriendRequests: Customer_account[];
+
+	@ManyToMany(() => Item)
+	@JoinTable({
+		name: "customer_owned_items",
+		joinColumn: {
+			name: "customer_id",
+			referencedColumnName: "id"
+		},
+		inverseJoinColumn: {
+			name: "item_id",
+			referencedColumnName: "id"
+		}
+	})
+	ownedItems: Item[];
 }
