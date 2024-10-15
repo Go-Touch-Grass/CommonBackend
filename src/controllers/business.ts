@@ -22,6 +22,9 @@ import { Voucher_transaction } from '../entities/Voucher_transaction';
 import { Customer_account } from '../entities/Customer_account';
 import { Customer_inventory } from '../entities/Customer_inventory';
 
+
+
+
 export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const { transactionId, redeemed } = req.body;
@@ -132,6 +135,36 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+export const updateHasSubscription = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { username } = req.params;
+    const { hasSubscriptionPlan } = req.body;
+    const businessAccount = await Business_account.findOne({
+      where: { username },
+      relations: ["business"],
+    });
+
+    if (!businessAccount) {
+      res
+        .status(404)
+        .json({ status: 404, message: "Business account not found" });
+      return;
+    }
+
+    const business = businessAccount.business;
+
+    business.hasSubscriptionPlan = hasSubscriptionPlan;
+    await business.save();
+    res.status(200).json({ message: 'Subscription status updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error updating subscription status' });
+  }
+}
 
 
 export const editSubscription = async (
