@@ -16,6 +16,7 @@ import { Business_register_business } from './Business_register_business';
 import { Outlet } from './Outlet';
 import { Customer_inventory } from "./Customer_inventory";
 import { Voucher_transaction } from "./Voucher_transaction";
+import { Item } from './Item';
 
 @Entity('business_voucher')
 export class Business_voucher extends BaseEntity {
@@ -97,4 +98,8 @@ export class Business_voucher extends BaseEntity {
 
     @OneToMany(() => Voucher_transaction, transaction => transaction.voucher)
     transactions: Voucher_transaction[];
+
+    @ManyToOne(() => Item, { nullable: true })
+    @JoinColumn({ name: 'reward_item_id' })
+    rewardItem: Item | null;
 }

@@ -594,7 +594,7 @@ export const checkExpiringSubscription = async (): Promise<void> => {
   }
 }
 
-cron.schedule('*/20 * * * * *', async () => {
+cron.schedule('*/10 * * * * *', async () => {
   console.log('Running automatic subscription renewal job...');
 
   try {
@@ -1580,7 +1580,7 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
 
 export const createVoucher = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, description, price, discount, duration, business_id, outlet_id } = req.body;
+    const { name, description, price, discount, duration, business_id, outlet_id, reward_item_id } = req.body;
     const username = (req as any).user.username;
 
     const businessAccount = await Business_account.findOne({ where: { username }, relations: ['business', 'outlets'] });
@@ -1595,7 +1595,7 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
         status: 400,
         message: 'Voucher image is required'
       });
-      return; // Exit the function early if no file is provided
+      return;
     }
 
     // Create a new voucher listing
@@ -1628,6 +1628,16 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
       newVoucher.outlet = outlet;
     }
 
+    // If reward_item_id is provided, associate with reward item
+    if (reward_item_id) {
+      const rewardItem = await Item.findOne({ where: { id: reward_item_id } });
+      if (!rewardItem) {
+        res.status(404).json({ message: 'Reward item not found' });
+        return;
+      }
+      newVoucher.rewardItem = rewardItem;
+    }
+
     // Save the voucher
     await newVoucher.save();
     res.status(201).json({ message: 'Voucher created successfully', voucher: newVoucher });
@@ -1641,10 +1651,11 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
 export const getAllVoucher = async (req: Request, res: Response): Promise<void> => {
   try {
     const { registration_id, outlet_id, searchTerm } = req.query;
-    //console.log('Received registration_id:', registration_id);
-    //console.log('Received outlet_id:', outlet_id);
     let vouchers;
-    const query = Business_voucher.createQueryBuilder('voucher');
+    const query = Business_voucher.createQueryBuilder('voucher')
+      .leftJoinAndSelect('voucher.rewardItem', 'rewardItem')
+      .leftJoinAndSelect('voucher.business_register_business', 'business')
+      .leftJoinAndSelect('voucher.outlet', 'outlet');
 
     // Apply search term if present
     if (searchTerm) {
@@ -1655,45 +1666,24 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
 
     if (registration_id) {
       // Fetch vouchers for the main business
-      // Convert business_id to a number
       const registrationIdNum = parseInt(registration_id as string, 10);
       if (isNaN(registrationIdNum)) {
         res.status(400).json({ message: 'Invalid registration_id' });
         return;
       }
 
-      const business = await Business_register_business.findOne({ where: { registration_id: registrationIdNum } });
-      if (!business) {
-        res.status(404).json({ message: 'Business not found' });
-        return;
-      }
-      /*
-      vouchers = await Business_voucher.find({
-          where: { business_register_business: business, outlet: IsNull() },
-          relations: ['business_register_business']
-      });
-      */
-
       // Filter vouchers for the main business without an outlet
       query.andWhere('voucher.business_register_business = :registrationId', { registrationId: registrationIdNum });
-      query.andWhere('voucher.outlet IS NULL'); // Ensure only vouchers without outlets are included
+      query.andWhere('voucher.outlet IS NULL');
 
     } else if (outlet_id) {
       // Fetch vouchers for the specific outlet
-      // Convert outlet_id to a number
       const outletIdNum = parseInt(outlet_id as string, 10);
       if (isNaN(outletIdNum)) {
         res.status(400).json({ message: 'Invalid outlet_id' });
         return;
       }
-      const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
-      if (!outlet) {
-        res.status(404).json({ message: 'Outlet not found' });
-        return;
-      }
-      /*
-      vouchers = await Business_voucher.find({ where: { outlet: outlet }, relations: ['outlet'] });
-      */
+
       // Filter vouchers for the specific outlet
       query.andWhere('voucher.outlet = :outletId', { outletId: outletIdNum });
 
@@ -1707,11 +1697,11 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
 
     // If no vouchers are found
     if (!vouchers || vouchers.length === 0) {
-      res.status(200).json({ message: 'No vouchers found' });
+      res.status(200).json({ message: 'No vouchers found', vouchers: [] });
       return;
     }
 
-    // Respond with the vouchers
+    // Respond with the entire voucher objects, including all relations
     res.status(200).json({ vouchers });
   } catch (error) {
     console.error('Error fetching vouchers:', error);
@@ -1719,10 +1709,7 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-export const getVoucher = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getVoucher = async (req: Request, res: Response): Promise<void> => {
   try {
     const { listing_id } = req.params;
     console.log("Received listing_id:", listing_id);
@@ -1735,7 +1722,7 @@ export const getVoucher = async (
 
     const voucher = await Business_voucher.findOne({
       where: { listing_id: voucherIdNum },
-      relations: ["business_register_business", "outlet"],
+      relations: ["business_register_business", "outlet", "rewardItem"],
     });
 
     if (!voucher) {
@@ -1750,13 +1737,10 @@ export const getVoucher = async (
   }
 };
 
-export const editVoucher = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const editVoucher = async (req: Request, res: Response): Promise<void> => {
   try {
     const { listing_id } = req.params;
-    const updatedData = req.body; // Ensure you're sending the correct fields from the frontend
+    const updatedData = req.body;
 
     const voucherIdNum = parseInt(listing_id, 10);
     if (isNaN(voucherIdNum)) {
@@ -1766,6 +1750,7 @@ export const editVoucher = async (
 
     const voucher = await Business_voucher.findOne({
       where: { listing_id: voucherIdNum },
+      relations: ['rewardItem'],
     });
     if (!voucher) {
       res.status(404).json({ message: "Voucher not found" });
@@ -1778,6 +1763,19 @@ export const editVoucher = async (
     voucher.price = updatedData.price;
     voucher.discount = updatedData.discount;
     voucher.voucherImage = updatedData.voucherImage;
+
+    // Update reward item if provided, or unequip if null
+    if (updatedData.reward_item_id) {
+      const rewardItem = await Item.findOne({ where: { id: updatedData.reward_item_id } });
+      if (!rewardItem) {
+        res.status(404).json({ message: 'Reward item not found' });
+        return;
+      }
+      voucher.rewardItem = rewardItem;
+    } else {
+      // Unequip the reward item by setting it to null
+      voucher.rewardItem = null;
+    }
 
     await voucher.save();
 

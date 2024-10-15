@@ -60,7 +60,7 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
     try {
         const voucher = await Business_voucher.findOne({
             where: { listing_id: voucherId },
-            relations: ['business_register_business', 'outlet']
+            relations: ['business_register_business', 'outlet', 'rewardItem']
         });
 
         if (!voucher) {
@@ -102,6 +102,22 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
             await inventory.save();
         }
 
+        // Add reward item to customer's inventory if it exists
+        if (voucher.rewardItem) {
+            const customer = await Customer_account.findOne({
+                where: { id: userId },
+                relations: ['ownedItems']
+            });
+
+            if (customer) {
+                const alreadyOwnsItem = customer.ownedItems.some(item => item.id === voucher.rewardItem!.id);
+                if (!alreadyOwnsItem) {
+                    customer.ownedItems.push(voucher.rewardItem);
+                    await customer.save();
+                }
+            }
+        }
+
         const transaction = new Voucher_transaction();
         transaction.voucher = voucher;
         transaction.gems_spent = discountedPriceInGems;
@@ -122,6 +138,11 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
                 discounted_price_in_gems: discountedPriceInGems,
                 duration: voucher.duration,
                 voucher_transaction_id: transaction.id,
+                reward_item: voucher.rewardItem ? {
+                    id: voucher.rewardItem.id,
+                    name: voucher.rewardItem.name,
+                    type: voucher.rewardItem.type
+                } : null,
             },
         });
     } catch (error) {

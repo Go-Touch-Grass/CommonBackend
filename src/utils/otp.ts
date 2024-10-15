@@ -44,7 +44,7 @@ export async function sendSubscriptionRenewEmail(email: string): Promise<void> {
         from: process.env.EMAIL_USER,
         to: email,
         subject: 'GoTouchGrass - Subscription about to expire ',
-        text: `Your subscription is about to expire in 7 days. Please renew your subscription to continue using our services.`,
+        text: `Your subscription is about to expire. Please renew your subscription to continue using our services.`,
     };
     await transporter.sendMail(mailOptions);
 }
