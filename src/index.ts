@@ -29,6 +29,7 @@ import "./jobs/subscriptionReminderJob";
 import { Business_voucher } from "./entities/Business_voucher";
 import { Customer_inventory } from "./entities/Customer_inventory";
 import { Voucher_transaction } from "./entities/Voucher_transaction";
+import { customerInventoryRouter } from './routes/customer_inventory_router';
 
 dotenv.config();
 
@@ -239,6 +240,7 @@ const main = async () => {
 		app.use(itemRouter);
 		app.use(avatarRouter);
 		app.use(customerSocialRouter);
+		app.use(customerInventoryRouter); // Add this line to use the new router
 
 		app.listen(8080, () => {
 			console.log("Now running on port 8080");
