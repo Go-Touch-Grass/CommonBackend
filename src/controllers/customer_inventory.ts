@@ -3,8 +3,8 @@ import { Customer_account } from "../entities/Customer_account";
 import { Customer_inventory } from "../entities/Customer_inventory";
 import { Business_voucher } from "../entities/Business_voucher";
 import { Voucher_transaction } from "../entities/Voucher_transaction";
-import { Item } from "../entities/Item";
-import { In } from "typeorm";
+import { Item, ItemType } from "../entities/Item";
+import { In, IsNull } from "typeorm";
 import { statusEnum } from "../entities/Business_register_business";
 
 export const getVoucherInventory = async (req: Request, res: Response): Promise<void> => {
@@ -240,19 +240,19 @@ export const getCustomerItems = async (req: Request, res: Response): Promise<voi
             where: [
                 { id: In(ownedItemIds) },
                 { 
-                    registration_id: null, 
-                    outlet_id: null, 
+                    business_register_business: IsNull(),
+                    outlet: IsNull(),
                     status: statusEnum.APPROVED 
                 }
             ]
         });
 
         // Categorize items
-        const categorizedItems = {
-            base: [],
-            hat: [],
-            shirt: [],
-            bottom: []
+        const categorizedItems: Record<ItemType, any[]> = {
+            [ItemType.BASE]: [],
+            [ItemType.HAT]: [],
+            [ItemType.SHIRT]: [],
+            [ItemType.BOTTOM]: []
         };
 
         items.forEach(item => {
@@ -267,7 +267,7 @@ export const getCustomerItems = async (req: Request, res: Response): Promise<voi
                 isOwned: ownedItemIds.includes(item.id)
             };
 
-            categorizedItems[item.type.toLowerCase()].push(itemData);
+            categorizedItems[item.type].push(itemData);
         });
 
         res.status(200).json({
