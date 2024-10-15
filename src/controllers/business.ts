@@ -23,8 +23,6 @@ import { Customer_account } from '../entities/Customer_account';
 import { Customer_inventory } from '../entities/Customer_inventory';
 
 
-
-
 export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const { transactionId, redeemed } = req.body;
@@ -89,10 +87,10 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
 
 
 
-
 export const getVoucherTransactions = async (req: Request, res: Response): Promise<void> => {
   try {
     const { listing_id } = req.params;
+    const { used } = req.query; // Get the 'used' query parameter
 
     // Convert listing_id to a number
     const voucherIdNum = parseInt(listing_id, 10);
@@ -101,11 +99,21 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
       return;
     }
 
-    // Fetch transactions with the voucher relationship
+    // Fetch transactions with the voucher relationship, applying the used filter
     const transactions = await Voucher_transaction.find({
-      where: { voucherId: voucherIdNum, used: false }, // Use the numeric voucherId
+      where: {
+        voucherId: voucherIdNum,
+        // Only filter on 'used' if it's not 'all' or undefined
+        ...(used === 'true' ? { used: true } : used === 'false' ? { used: false } : {}),
+      },
       relations: ['voucher'], // Include voucher details
     });
+
+    // If there are no transactions, return an empty array
+    if (transactions.length === 0) {
+      res.status(200).json({ transactions: [], message: 'No transactions found for this voucher.' });
+      return;
+    }
 
     const customers = await Customer_account.find(); // Fetch all customers
     const customerMap = customers.reduce((acc, customer) => {
@@ -123,10 +131,6 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
       expirationDate: transaction.voucher.expirationDate.toISOString(),
       amountSpent: transaction.gems_spent,
       redeemed: transaction.redeemed,
-      //businessId: transaction.voucher.business_register_business ? transaction.voucher.business_register_business.registration_id : null,  // Include business ID
-      //businessName: transaction.voucher.business_register_business ? transaction.voucher.business_register_business.entityName : 'Unknown',
-      //outletId: transaction.voucher.outlet ? transaction.voucher.outlet.outlet_id : null,  // Include outlet ID
-      //outletName: transaction.voucher.outlet ? transaction.voucher.outlet.outlet_name : 'Unknown',  // Include outlet name
     }));
 
     res.status(200).json({ transactions: response });
@@ -135,6 +139,8 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
 
 export const updateHasSubscription = async (
   req: Request,
