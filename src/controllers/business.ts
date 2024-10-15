@@ -103,10 +103,9 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
     const transactions = await Voucher_transaction.find({
       where: {
         voucherId: voucherIdNum,
-        // Only filter on 'used' if it's not 'all' or undefined
         ...(used === 'true' ? { used: true } : used === 'false' ? { used: false } : {}),
       },
-      relations: ['voucher'], // Include voucher details
+      relations: ['voucher'],
     });
 
     // If there are no transactions, return an empty array
@@ -131,12 +130,49 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
       expirationDate: transaction.voucher.expirationDate.toISOString(),
       amountSpent: transaction.gems_spent,
       redeemed: transaction.redeemed,
+      used: transaction.used,
     }));
 
     res.status(200).json({ transactions: response });
   } catch (error) {
     console.error('Error fetching transactions:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+export const updateOutletSubscription = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    // Convert outletId to a number
+    const outletId = parseInt(req.params.outletId, 10);
+    const { hasSubscriptionPlan } = req.body;
+
+    // Check if outletId is a valid number
+    if (isNaN(outletId)) {
+      res.status(400).json({ message: "Invalid outlet ID" });
+      return;
+    }
+
+    const outlet = await Outlet.findOne({
+      where: { outlet_id: outletId }, // Use numeric outlet_id
+      relations: ["business"],
+    });
+
+    if (!outlet) {
+      res.status(404).json({ message: "Outlet not found" });
+      return;
+    }
+
+    outlet.hasSubscriptionPlan = hasSubscriptionPlan;
+    await outlet.save();
+
+    res.status(200).json({ message: 'Outlet subscription status updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error updating outlet subscription status' });
   }
 };
 

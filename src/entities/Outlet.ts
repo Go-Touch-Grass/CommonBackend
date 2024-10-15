@@ -36,11 +36,14 @@ export class Outlet extends BaseEntity {
     vouchers: Business_voucher[];
 
     @OneToOne(() => Avatar, (avatar) => avatar.outlet, { cascade: true })
-	@JoinColumn()
-	avatar: Avatar;
+    @JoinColumn()
+    avatar: Avatar;
 
     @OneToMany(() => Item, item => item.outlet)
     items: Item[];
+
+    @Column({ default: false })
+    hasSubscriptionPlan: boolean;
 
     /*@ManyToOne(() => Business_register_business, business_register_business => business_register_business.outlets)
     @JoinColumn({
