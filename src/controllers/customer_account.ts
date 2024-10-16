@@ -574,8 +574,20 @@ export const getAllValidSubscription = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'No active subscriptions found' });
         }
 
+        const subscriptionsWithValidBanStatus = activeSubscriptions.filter(subscription => {
+            const isOutlet = !!subscription.outlet;
+
+            if (isOutlet){
+                const outletBanStatus = subscription.outlet?.banStatus;
+                return outletBanStatus === false
+            } else {
+                const businessBanStatus = subscription.business_register_business?.banStatus;
+                return businessBanStatus === false
+            } 
+          });
+
         // Map the subscriptions to include the business or outlet details and avatar information
-        const subscriptionsWithAvatars = activeSubscriptions.map((subscription) => {
+        const subscriptionsWithAvatars = subscriptionsWithValidBanStatus.map((subscription) => {
             // Check if the subscription is for an outlet
             const isOutlet = !!subscription.outlet;
 
@@ -598,6 +610,7 @@ export const getAllValidSubscription = async (req: Request, res: Response) => {
                         outletName: subscription.outlet?.outlet_name,
                         location: subscription.outlet?.location,
                         description: subscription.outlet?.description,
+                        banStatus: subscription.outlet?.banStatus,
                         avatar: avatar
                             ? {
                                 avatarId: avatar.id,
@@ -613,6 +626,7 @@ export const getAllValidSubscription = async (req: Request, res: Response) => {
                         registrationId: subscription.business_register_business?.registration_id,
                         entityName: subscription.business_register_business?.entityName,
                         location: subscription.business_register_business?.location,
+                        banStatus:subscription.business_register_business?.banStatus,
                         category: subscription.business_register_business?.category,
                         avatar: avatar
                             ? {

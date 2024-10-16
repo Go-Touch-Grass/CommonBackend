@@ -44,6 +44,9 @@ export class Outlet extends BaseEntity {
 
     @Column({ default: false })
     hasSubscriptionPlan: boolean;
+    
+    @Column({default: false})
+    banStatus: boolean;
 
     /*@ManyToOne(() => Business_register_business, business_register_business => business_register_business.outlets)
     @JoinColumn({

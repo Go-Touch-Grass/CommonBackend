@@ -63,6 +63,7 @@ export const banUnbanBusiness = async (
       const { status, remarks } = req.body;
       const business = await Business_account.findOne({
         where: { business_id: id },
+        relations: ['business', 'outlets']
       });
   
       if (!business) {
@@ -75,6 +76,20 @@ export const banUnbanBusiness = async (
   
       business.banStatus = status;
       business.banRemarks = remarks;
+
+         // Check if 'business_register_business' exists and update its banStatus
+    if (business.business) {
+        business.business.banStatus = status;
+        await business.business.save(); // Ensure you're saving the loaded entity
+      }
+  
+      // Check if outlets exist and update banStatus for each outlet
+      if (business.outlets && business.outlets.length > 0) {
+        for (let outlet of business.outlets) {
+          outlet.banStatus = status;
+          await outlet.save(); // Save each outlet entity after updating banStatus
+        }
+      }
   
       await business.save();
   
@@ -83,7 +98,7 @@ export const banUnbanBusiness = async (
       console.log(error);
       res.status(500).json({
         status: 500,
-        message: "Failed to update business ban status",
+        message: `Failed to update business ban status ${error}`,
       });
     }
   };

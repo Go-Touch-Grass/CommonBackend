@@ -85,6 +85,9 @@ export class Business_register_business extends BaseEntity {
     @OneToMany(() => Item, item => item.business_register_business)
     items: Item[];
 
+    @Column({default: false})
+    banStatus: boolean;
+
     /*
     @OneToMany(() => Outlet, outlet => outlet.business, { cascade: true, onDelete: "CASCADE" })//cascade delete
     outlets: Outlet[];
