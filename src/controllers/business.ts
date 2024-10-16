@@ -146,9 +146,8 @@ export const updateOutletSubscription = async (
   res: Response
 ): Promise<void> => {
   try {
-    // Convert outletId to a number
     const outletId = parseInt(req.params.outletId, 10);
-    const { hasSubscriptionPlan } = req.body;
+    const { duration, distance_coverage } = req.body;
 
     // Check if outletId is a valid number
     if (isNaN(outletId)) {
@@ -157,7 +156,7 @@ export const updateOutletSubscription = async (
     }
 
     const outlet = await Outlet.findOne({
-      where: { outlet_id: outletId }, // Use numeric outlet_id
+      where: { outlet_id: outletId },
       relations: ["business"],
     });
 
@@ -166,13 +165,74 @@ export const updateOutletSubscription = async (
       return;
     }
 
-    outlet.hasSubscriptionPlan = hasSubscriptionPlan;
+    // Pricing structure (same as in createSubscription)
+    const pricing = {
+      base: {
+        1: { price: 50, gems: 500 },
+        2: { price: 90, gems: 900 },
+        3: { price: 120, gems: 1200 },
+      },
+      extra: {
+        1: { price: 10, gems: 100 },
+        2: { price: 18, gems: 180 },
+        3: { price: 25, gems: 250 },
+      },
+    };
+
+    // Calculate total gems needed
+    const total_gem = pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0);
+
+    const businessAccount = outlet.business;
+
+    // Check gem balance
+    if (businessAccount.gem_balance < total_gem) {
+      res.status(400).json({ message: "Not enough gems in the account" });
+      return;
+    }
+
+    // Deduct gems
+    businessAccount.gem_balance -= total_gem;
+    const businessTransaction = Business_transaction.create({
+      gems_deducted: total_gem,
+      business_account: businessAccount,
+    });
+    await businessTransaction.save();
+    await businessAccount.save();
+
+    // Create or update subscription
+    let subscription = await BusinessAccountSubscription.findOne({
+      where: { outlet: { outlet_id: outletId } },
+    });
+
+    if (!subscription) {
+      subscription = BusinessAccountSubscription.create({
+        outlet: outlet,
+        business_register_business: businessAccount.business,
+      });
+    }
+
+    subscription.duration = duration;
+    subscription.distance_coverage = distance_coverage;
+    subscription.total_cost = pricing.base[duration].price + (pricing.extra[distance_coverage]?.price || 0);
+    subscription.total_gem = total_gem;
+    subscription.title = `${duration} Month Plan`;
+    subscription.description = `Subscription for ${duration} month(s) with ${distance_coverage} km coverage.`;
+    subscription.activation_date = new Date();
+    subscription.expiration_date = addMonths(new Date(), duration);
+
+    await subscription.save();
+
+    // Update outlet subscription status
+    outlet.hasSubscriptionPlan = true;
     await outlet.save();
 
-    res.status(200).json({ message: 'Outlet subscription status updated successfully' });
+    res.status(200).json({
+      message: 'Outlet subscription updated successfully',
+      subscription: subscription,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error updating outlet subscription status' });
+    res.status(500).json({ message: 'Error updating outlet subscription' });
   }
 };
 
@@ -473,16 +533,22 @@ export const createOutletSubscription = async (
       description,
     } = req.body;
 
-    console.log("Incoming request data:", {
-      username,
-      outletId,
-      duration,
-      distance_coverage,
-      total_cost,
-      total_gem,
-      title,
-      description,
-    });
+    // Pricing structure (same as in createSubscription)
+    const pricing = {
+      base: {
+        1: { price: 50, gems: 500 },
+        2: { price: 90, gems: 900 },
+        3: { price: 120, gems: 1200 },
+      },
+      extra: {
+        1: { price: 10, gems: 100 },
+        2: { price: 18, gems: 180 },
+        3: { price: 25, gems: 250 },
+      },
+    };
+
+    // Calculate total gems needed
+    const calculatedTotalGem = pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0);
 
     const businessAccount = await Business_account.findOne({
       where: { username },
@@ -490,9 +556,7 @@ export const createOutletSubscription = async (
     });
 
     if (!businessAccount) {
-      res
-        .status(404)
-        .json({ status: 404, message: "Business account not found" });
+      res.status(404).json({ message: "Business account not found" });
       return;
     }
 
@@ -501,65 +565,55 @@ export const createOutletSubscription = async (
     });
 
     if (!outlet) {
-      res.status(404).json({ status: 404, message: "Outlet not found" });
+      res.status(404).json({ message: "Outlet not found" });
       return;
     }
 
-    const business = businessAccount.business;
-
-    const activationDate = new Date();
-
-    let expirationDate = new Date(activationDate);
-    expirationDate.setMonth(activationDate.getMonth() + duration);
-
-    if (expirationDate.getDate() !== activationDate.getDate()) {
-      expirationDate.setDate(0);
+    // Check gem balance
+    if (businessAccount.gem_balance < calculatedTotalGem) {
+      res.status(400).json({ message: "Not enough gems in the account" });
+      return;
     }
 
-    // Log dates for debugging
-    console.log("Activation Date:", activationDate);
-    console.log("Final Expiration Date:", expirationDate);
+    // Deduct gems
+    businessAccount.gem_balance -= calculatedTotalGem;
+    const businessTransaction = Business_transaction.create({
+      gems_deducted: calculatedTotalGem,
+      business_account: businessAccount,
+    });
+    await businessTransaction.save();
+    await businessAccount.save();
+
+    const activationDate = new Date();
+    const expirationDate = new Date(activationDate);
+    expirationDate.setMonth(activationDate.getMonth() + duration);
 
     const businessAccountSubscription = BusinessAccountSubscription.create({
       duration,
       distance_coverage,
-      total_cost,
-      total_gem,
-      title,
-      description,
+      total_cost: pricing.base[duration].price + (pricing.extra[distance_coverage]?.price || 0),
+      total_gem: calculatedTotalGem,
+      title: `${duration} Month Plan`,
+      description: `Subscription for ${duration} month(s) with ${distance_coverage} km coverage.`,
       activation_date: activationDate,
       expiration_date: expirationDate,
-      business_register_business: business,
+      business_register_business: businessAccount.business,
       outlet: outlet,
     });
 
     await businessAccountSubscription.save();
 
-    const formattedActivationDate = activationDate.toLocaleDateString("en-US");
-    const formattedExpirationDate = expirationDate.toLocaleDateString("en-US");
+    // Update outlet subscription status
+    outlet.hasSubscriptionPlan = true;
+    await outlet.save();
 
     res.status(201).json({
-      message: "Subscription created successfully",
-      subscription: {
-        duration,
-        distance_coverage,
-        total_cost,
-        total_gem,
-        title,
-        description,
-        activation_date: formattedActivationDate, // Send formatted date
-        expiration_date: formattedExpirationDate, // Send formatted date
-        business_register_business: business,
-        outlet: outlet,
-      },
+      message: "Outlet subscription created successfully",
+      subscription: businessAccountSubscription,
     });
   } catch (error) {
-    console.error("Error creating subscription:", error);
-    res.status(500).json({
-      status: 500,
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    console.error("Error creating outlet subscription:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
