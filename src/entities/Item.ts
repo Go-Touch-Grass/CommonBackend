@@ -38,7 +38,7 @@ export class Item extends BaseEntity {
 
     @ManyToOne(() => Outlet, outlet => outlet.items, { nullable: true })
     @JoinColumn({ name: 'outlet_id' })
-    outlet: Outlet;
+    outlet: Outlet | null;
 
     @Column({ type: 'float', nullable: true })
     scale: number;

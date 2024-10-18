@@ -102,4 +102,7 @@ export class Business_voucher extends BaseEntity {
     @ManyToOne(() => Item, { nullable: true })
     @JoinColumn({ name: 'reward_item_id' })
     rewardItem: Item | null;
+
+    @Column({ default: false })
+    isDeleted: boolean;
 }

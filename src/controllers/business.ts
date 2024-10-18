@@ -1226,6 +1226,9 @@ export const retrieveProfile = async (
       return;
     }
 
+    // Filter out deleted outlets
+    const activeOutlets = businessAccount.outlets.filter(outlet => !outlet.isDeleted);
+
     res.json({
       status: 200,
       business: {
@@ -1240,7 +1243,7 @@ export const retrieveProfile = async (
         banRemarks: businessAccount.banRemarks,
         transactions: businessAccount.transactions
       },
-      outlets: businessAccount.outlets,
+      outlets: activeOutlets,
       registeredBusiness: businessAccount.business,
     });
   } catch (error) {
@@ -1374,11 +1377,10 @@ export const registerBusiness = async (
       entityName,
       location,
       category,
-      //username,
     } = req.body;
     console.log("Request body: ", req.body);
     console.log("Request file: ", req.file);
-    //console.log(req.body.username);
+
     const isUsernameAlreadyInUse = await Business_register_business.findOneBy({
       entityName,
     });
@@ -1388,6 +1390,7 @@ export const registerBusiness = async (
         status: 400,
         message: "Business EntityName already in use",
       });
+      return; // Add this to prevent further execution
     }
 
     // Check if req.file is defined
@@ -1396,7 +1399,7 @@ export const registerBusiness = async (
         status: 400,
         message: "Proof file (image or PDF) is required",
       });
-      return; // Exit the function early if no file is provided
+      return; // Add this to prevent further execution
     }
 
     const businessAccount = await Business_account.findOneBy({ username });
@@ -1405,18 +1408,17 @@ export const registerBusiness = async (
         status: 400,
         message: "Business Account not found",
       });
-      return;
+      return; // Add this to prevent further execution
     }
 
     const registeredBusiness = Business_register_business.create({
       entityName,
       location,
       category,
-      //proof: req.file.path, // store the file path or URL.
-      proof: `uploads/proofOfBusiness/${req.file.filename}`, // store relative path
+      proof: `uploads/proofOfBusiness/${req.file.filename}`,
       status: "pending",
       remarks: "",
-      business_account: businessAccount, // Link the business_account entity to business_register_business
+      business_account: businessAccount,
     });
 
     await registeredBusiness.save();
@@ -1560,7 +1562,12 @@ export const retrieveOutlet = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
+    const outlet = await Outlet.findOne({ 
+      where: { 
+        outlet_id: outletIdNum,
+        isDeleted: false // Only retrieve non-deleted outlets
+      } 
+    });
     if (!outlet) {
       res.status(404).json({ message: 'Outlet not found' });
       return;
@@ -1607,7 +1614,7 @@ export const retrieveOutletsByRegistrationId = async (req: Request, res: Respons
 export const editOutlet = async (req: Request, res: Response): Promise<void> => {
   try {
     const { outlet_id } = req.params;
-    const updatedData = req.body; // Ensure you're sending the correct fields from the frontend
+    const updatedData = req.body;
     console.log('EditOutlet - Updated data:', updatedData);
     const outletIdNum = parseInt(outlet_id, 10);
     if (isNaN(outletIdNum)) {
@@ -1615,13 +1622,18 @@ export const editOutlet = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
+    const outlet = await Outlet.findOne({ 
+      where: { 
+        outlet_id: outletIdNum,
+        isDeleted: false // Only edit non-deleted outlets
+      } 
+    });
     if (!outlet) {
-      res.status(404).json({ message: 'outlet not found' });
+      res.status(404).json({ message: 'Outlet not found' });
       return;
     }
 
-    // Update voucher fields based on the provided data
+    // Update outlet fields based on the provided data
     outlet.outlet_name = updatedData.name;
     outlet.location = updatedData.location;
     outlet.description = updatedData.description;
@@ -1629,22 +1641,23 @@ export const editOutlet = async (req: Request, res: Response): Promise<void> => 
 
     await outlet.save();
 
-    res.status(200).json({ message: 'Outlet updated successfully', voucher: outlet });
+    res.status(200).json({ message: 'Outlet updated successfully', outlet: outlet });
   } catch (error) {
     console.error('Error updating outlet:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
-
 }
-
 export const deleteOutlet = async (req: Request, res: Response): Promise<void> => {
-
   try {
     const { outlet_id } = req.params;
     const userId = (req as any).user.id;
 
     const outletID = parseInt(outlet_id);
-    const outlet = await Outlet.findOneBy({ outlet_id: outletID });
+    const outlet = await Outlet.findOne({
+      where: { outlet_id: outletID },
+      relations: ['business_account_subscription', 'vouchers', 'items']
+    });
+
     if (!outlet) {
       res.status(404).json({
         status: 404,
@@ -1653,10 +1666,37 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    await outlet.remove(); // delete the outlet
+    // Soft delete the outlet
+    outlet.isDeleted = true;
+    await outlet.save();
+
+    // Soft delete related subscriptions
+    if (outlet.business_account_subscription && outlet.business_account_subscription.length > 0) {
+      await Promise.all(outlet.business_account_subscription.map(async (subscription) => {
+        subscription.status = "deleted";
+        await subscription.save();
+      }));
+    }
+
+    // Soft delete related vouchers
+    if (outlet.vouchers && outlet.vouchers.length > 0) {
+      await Promise.all(outlet.vouchers.map(async (voucher) => {
+        voucher.isDeleted = true;
+        await voucher.save();
+      }));
+    }
+
+    // // Remove association between outlet and items
+    // if (outlet.items && outlet.items.length > 0) {
+    //   await Promise.all(outlet.items.map(async (item) => {
+    //     item.outlet = null;
+    //     await item.save();
+    //   }));
+    // }
+
     res.json({
       status: 200,
-      message: 'Outlet deleted successfully',
+      message: 'Outlet deleted successfully, related subscriptions marked as deleted and associations removed',
     });
   } catch (error) {
     console.error('Error deleting outlet:', error);
@@ -1665,7 +1705,6 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
       message: 'Internal Server Error',
     });
   }
-
 }
 
 export const createVoucher = async (req: Request, res: Response): Promise<void> => {
@@ -1782,6 +1821,8 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    query.andWhere('voucher.isDeleted = :isDeleted', { isDeleted: false });
+
     // Fetch the vouchers
     vouchers = await query.getMany();
 
@@ -1811,7 +1852,7 @@ export const getVoucher = async (req: Request, res: Response): Promise<void> => 
     }
 
     const voucher = await Business_voucher.findOne({
-      where: { listing_id: voucherIdNum },
+      where: { listing_id: voucherIdNum, isDeleted: false },
       relations: ["business_register_business", "outlet", "rewardItem"],
     });
 
@@ -1839,7 +1880,7 @@ export const editVoucher = async (req: Request, res: Response): Promise<void> =>
     }
 
     const voucher = await Business_voucher.findOne({
-      where: { listing_id: voucherIdNum },
+      where: { listing_id: voucherIdNum, isDeleted: false },
       relations: ['rewardItem'],
     });
     if (!voucher) {
@@ -1891,15 +1932,16 @@ export const deleteVoucher = async (
 
     // Find the voucher by listing_id
     const voucher = await Business_voucher.findOne({
-      where: { listing_id: voucherIdNum },
+      where: { listing_id: voucherIdNum, isDeleted: false },
     });
     if (!voucher) {
       res.status(404).json({ message: "Voucher not found" });
       return;
     }
 
-    // Delete the voucher
-    await voucher.remove();
+    // Soft delete the voucher
+    voucher.isDeleted = true;
+    await voucher.save();
 
     res.status(200).json({ message: "Voucher deleted successfully" });
   } catch (error) {
@@ -1936,6 +1978,8 @@ export const searchVouchers = async (
     if (outlet_id) {
       query.andWhere("voucher.outlet = :outlet_id", { outlet_id });
     }
+
+    query.andWhere("voucher.isDeleted = :isDeleted", { isDeleted: false });
 
     vouchers = await query.getMany();
 

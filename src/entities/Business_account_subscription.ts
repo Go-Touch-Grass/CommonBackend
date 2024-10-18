@@ -64,7 +64,7 @@ export class BusinessAccountSubscription extends BaseEntity {
     @JoinColumn({
         name: "outlet_id"
     })
-    outlet: Outlet;
+    outlet: Outlet | null;
     /*
         if outlet_id is empty: main branch
         else: is an outlet
