@@ -146,8 +146,9 @@ export const updateOutletSubscription = async (
   res: Response
 ): Promise<void> => {
   try {
+    // Convert outletId to a number
     const outletId = parseInt(req.params.outletId, 10);
-    const { duration, distance_coverage } = req.body;
+    const { hasSubscriptionPlan } = req.body;
 
     // Check if outletId is a valid number
     if (isNaN(outletId)) {
@@ -156,7 +157,7 @@ export const updateOutletSubscription = async (
     }
 
     const outlet = await Outlet.findOne({
-      where: { outlet_id: outletId },
+      where: { outlet_id: outletId }, // Use numeric outlet_id
       relations: ["business"],
     });
 
@@ -165,74 +166,13 @@ export const updateOutletSubscription = async (
       return;
     }
 
-    // Pricing structure (same as in createSubscription)
-    const pricing = {
-      base: {
-        1: { price: 50, gems: 500 },
-        2: { price: 90, gems: 900 },
-        3: { price: 120, gems: 1200 },
-      },
-      extra: {
-        1: { price: 10, gems: 100 },
-        2: { price: 18, gems: 180 },
-        3: { price: 25, gems: 250 },
-      },
-    };
-
-    // Calculate total gems needed
-    const total_gem = pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0);
-
-    const businessAccount = outlet.business;
-
-    // Check gem balance
-    if (businessAccount.gem_balance < total_gem) {
-      res.status(400).json({ message: "Not enough gems in the account" });
-      return;
-    }
-
-    // Deduct gems
-    businessAccount.gem_balance -= total_gem;
-    const businessTransaction = Business_transaction.create({
-      gems_deducted: total_gem,
-      business_account: businessAccount,
-    });
-    await businessTransaction.save();
-    await businessAccount.save();
-
-    // Create or update subscription
-    let subscription = await BusinessAccountSubscription.findOne({
-      where: { outlet: { outlet_id: outletId } },
-    });
-
-    if (!subscription) {
-      subscription = BusinessAccountSubscription.create({
-        outlet: outlet,
-        business_register_business: businessAccount.business,
-      });
-    }
-
-    subscription.duration = duration;
-    subscription.distance_coverage = distance_coverage;
-    subscription.total_cost = pricing.base[duration].price + (pricing.extra[distance_coverage]?.price || 0);
-    subscription.total_gem = total_gem;
-    subscription.title = `${duration} Month Plan`;
-    subscription.description = `Subscription for ${duration} month(s) with ${distance_coverage} km coverage.`;
-    subscription.activation_date = new Date();
-    subscription.expiration_date = addMonths(new Date(), duration);
-
-    await subscription.save();
-
-    // Update outlet subscription status
-    outlet.hasSubscriptionPlan = true;
+    outlet.hasSubscriptionPlan = hasSubscriptionPlan;
     await outlet.save();
 
-    res.status(200).json({
-      message: 'Outlet subscription updated successfully',
-      subscription: subscription,
-    });
+    res.status(200).json({ message: 'Outlet subscription status updated successfully' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error updating outlet subscription' });
+    res.status(500).json({ message: 'Error updating outlet subscription status' });
   }
 };
 
@@ -533,22 +473,16 @@ export const createOutletSubscription = async (
       description,
     } = req.body;
 
-    // Pricing structure (same as in createSubscription)
-    const pricing = {
-      base: {
-        1: { price: 50, gems: 500 },
-        2: { price: 90, gems: 900 },
-        3: { price: 120, gems: 1200 },
-      },
-      extra: {
-        1: { price: 10, gems: 100 },
-        2: { price: 18, gems: 180 },
-        3: { price: 25, gems: 250 },
-      },
-    };
-
-    // Calculate total gems needed
-    const calculatedTotalGem = pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0);
+    console.log("Incoming request data:", {
+      username,
+      outletId,
+      duration,
+      distance_coverage,
+      total_cost,
+      total_gem,
+      title,
+      description,
+    });
 
     const businessAccount = await Business_account.findOne({
       where: { username },
@@ -556,7 +490,9 @@ export const createOutletSubscription = async (
     });
 
     if (!businessAccount) {
-      res.status(404).json({ message: "Business account not found" });
+      res
+        .status(404)
+        .json({ status: 404, message: "Business account not found" });
       return;
     }
 
@@ -565,55 +501,65 @@ export const createOutletSubscription = async (
     });
 
     if (!outlet) {
-      res.status(404).json({ message: "Outlet not found" });
+      res.status(404).json({ status: 404, message: "Outlet not found" });
       return;
     }
 
-    // Check gem balance
-    if (businessAccount.gem_balance < calculatedTotalGem) {
-      res.status(400).json({ message: "Not enough gems in the account" });
-      return;
-    }
-
-    // Deduct gems
-    businessAccount.gem_balance -= calculatedTotalGem;
-    const businessTransaction = Business_transaction.create({
-      gems_deducted: calculatedTotalGem,
-      business_account: businessAccount,
-    });
-    await businessTransaction.save();
-    await businessAccount.save();
+    const business = businessAccount.business;
 
     const activationDate = new Date();
-    const expirationDate = new Date(activationDate);
+
+    let expirationDate = new Date(activationDate);
     expirationDate.setMonth(activationDate.getMonth() + duration);
+
+    if (expirationDate.getDate() !== activationDate.getDate()) {
+      expirationDate.setDate(0);
+    }
+
+    // Log dates for debugging
+    console.log("Activation Date:", activationDate);
+    console.log("Final Expiration Date:", expirationDate);
 
     const businessAccountSubscription = BusinessAccountSubscription.create({
       duration,
       distance_coverage,
-      total_cost: pricing.base[duration].price + (pricing.extra[distance_coverage]?.price || 0),
-      total_gem: calculatedTotalGem,
-      title: `${duration} Month Plan`,
-      description: `Subscription for ${duration} month(s) with ${distance_coverage} km coverage.`,
+      total_cost,
+      total_gem,
+      title,
+      description,
       activation_date: activationDate,
       expiration_date: expirationDate,
-      business_register_business: businessAccount.business,
+      business_register_business: business,
       outlet: outlet,
     });
 
     await businessAccountSubscription.save();
 
-    // Update outlet subscription status
-    outlet.hasSubscriptionPlan = true;
-    await outlet.save();
+    const formattedActivationDate = activationDate.toLocaleDateString("en-US");
+    const formattedExpirationDate = expirationDate.toLocaleDateString("en-US");
 
     res.status(201).json({
-      message: "Outlet subscription created successfully",
-      subscription: businessAccountSubscription,
+      message: "Subscription created successfully",
+      subscription: {
+        duration,
+        distance_coverage,
+        total_cost,
+        total_gem,
+        title,
+        description,
+        activation_date: formattedActivationDate, // Send formatted date
+        expiration_date: formattedExpirationDate, // Send formatted date
+        business_register_business: business,
+        outlet: outlet,
+      },
     });
   } catch (error) {
-    console.error("Error creating outlet subscription:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error creating subscription:", error);
+    res.status(500).json({
+      status: 500,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 
@@ -684,7 +630,7 @@ export const checkExpiringSubscription = async (): Promise<void> => {
   }
 }
 
-cron.schedule('*/10 * * * * *', async () => {
+cron.schedule('*/20 * * * * *', async () => {
   console.log('Running automatic subscription renewal job...');
 
   try {
@@ -856,7 +802,8 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     const existingSubscription = await BusinessAccountSubscription.findOne({
       where: {
         business_register_business: businessAccount.business,
-        outlet: outlet_id || null // Match outlet_id or main subscription (null)
+        outlet: outlet_id || null, // Match outlet_id or main subscription (null)
+        status: 'active' // Only renew active subscriptions
       },
       relations: ['business_register_business']
     });
@@ -875,13 +822,21 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     console.log('Found existing subscription:', existingSubscription);
 
     const currentDate = new Date();
-    const newExpirationDate = new Date(existingSubscription.expiration_date);
+    let newExpirationDate = new Date(existingSubscription.expiration_date);
 
-    // Extend subscription expiration date by adding the duration
+    // If the current date is after the expiration date, start from current date
+    if (currentDate > newExpirationDate) {
+      newExpirationDate = new Date(currentDate);
+    }
+
+    // Extend by the subscription duration
     newExpirationDate.setMonth(newExpirationDate.getMonth() + duration);
+
+    console.log('New expiration date calculated:', newExpirationDate);
 
     // Deduct the total gem cost from the gem balance
     businessAccount.gem_balance -= total_gem;
+
     await businessAccount.save();
 
     existingSubscription.activation_date = currentDate;
@@ -890,14 +845,16 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     existingSubscription.distance_coverage = distance_coverage;
     existingSubscription.total_gem = total_gem;
 
+    console.log('Saving updated subscription:', existingSubscription); // Log updated subscription before saving
     await existingSubscription.save();
-
     console.log('Subscription successfully renewed:', existingSubscription);
+    const savedSubscription = await existingSubscription.save();
+    console.log('Subscription saved in DB:', savedSubscription); // Check if the updated object is being persisted
 
     res.status(200).json({
       status: 200,
       message: "Subscription successfully renewed",
-      subscription: existingSubscription,
+      subscription: existingSubscription, // Include this to return updated data to the frontend
     });
   } catch (error) {
     console.error("Error renewing subscription:", error);
@@ -908,6 +865,8 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     });
   }
 };
+
+
 
 
 export const viewSubscription = async (
@@ -1709,7 +1668,7 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
 
 export const createVoucher = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, description, price, discount, duration, business_id, outlet_id, reward_item_id } = req.body;
+    const { name, description, price, discount, duration, business_id, outlet_id } = req.body;
     const username = (req as any).user.username;
 
     const businessAccount = await Business_account.findOne({ where: { username }, relations: ['business', 'outlets'] });
@@ -1724,7 +1683,7 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
         status: 400,
         message: 'Voucher image is required'
       });
-      return;
+      return; // Exit the function early if no file is provided
     }
 
     // Create a new voucher listing
@@ -1757,16 +1716,6 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
       newVoucher.outlet = outlet;
     }
 
-    // If reward_item_id is provided, associate with reward item
-    if (reward_item_id) {
-      const rewardItem = await Item.findOne({ where: { id: reward_item_id } });
-      if (!rewardItem) {
-        res.status(404).json({ message: 'Reward item not found' });
-        return;
-      }
-      newVoucher.rewardItem = rewardItem;
-    }
-
     // Save the voucher
     await newVoucher.save();
     res.status(201).json({ message: 'Voucher created successfully', voucher: newVoucher });
@@ -1780,11 +1729,10 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
 export const getAllVoucher = async (req: Request, res: Response): Promise<void> => {
   try {
     const { registration_id, outlet_id, searchTerm } = req.query;
+    //console.log('Received registration_id:', registration_id);
+    //console.log('Received outlet_id:', outlet_id);
     let vouchers;
-    const query = Business_voucher.createQueryBuilder('voucher')
-      .leftJoinAndSelect('voucher.rewardItem', 'rewardItem')
-      .leftJoinAndSelect('voucher.business_register_business', 'business')
-      .leftJoinAndSelect('voucher.outlet', 'outlet');
+    const query = Business_voucher.createQueryBuilder('voucher');
 
     // Apply search term if present
     if (searchTerm) {
@@ -1795,24 +1743,45 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
 
     if (registration_id) {
       // Fetch vouchers for the main business
+      // Convert business_id to a number
       const registrationIdNum = parseInt(registration_id as string, 10);
       if (isNaN(registrationIdNum)) {
         res.status(400).json({ message: 'Invalid registration_id' });
         return;
       }
 
+      const business = await Business_register_business.findOne({ where: { registration_id: registrationIdNum } });
+      if (!business) {
+        res.status(404).json({ message: 'Business not found' });
+        return;
+      }
+      /*
+      vouchers = await Business_voucher.find({
+          where: { business_register_business: business, outlet: IsNull() },
+          relations: ['business_register_business']
+      });
+      */
+
       // Filter vouchers for the main business without an outlet
       query.andWhere('voucher.business_register_business = :registrationId', { registrationId: registrationIdNum });
-      query.andWhere('voucher.outlet IS NULL');
+      query.andWhere('voucher.outlet IS NULL'); // Ensure only vouchers without outlets are included
 
     } else if (outlet_id) {
       // Fetch vouchers for the specific outlet
+      // Convert outlet_id to a number
       const outletIdNum = parseInt(outlet_id as string, 10);
       if (isNaN(outletIdNum)) {
         res.status(400).json({ message: 'Invalid outlet_id' });
         return;
       }
-
+      const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
+      if (!outlet) {
+        res.status(404).json({ message: 'Outlet not found' });
+        return;
+      }
+      /*
+      vouchers = await Business_voucher.find({ where: { outlet: outlet }, relations: ['outlet'] });
+      */
       // Filter vouchers for the specific outlet
       query.andWhere('voucher.outlet = :outletId', { outletId: outletIdNum });
 
@@ -1828,11 +1797,11 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
 
     // If no vouchers are found
     if (!vouchers || vouchers.length === 0) {
-      res.status(200).json({ message: 'No vouchers found', vouchers: [] });
+      res.status(200).json({ message: 'No vouchers found' });
       return;
     }
 
-    // Respond with the entire voucher objects, including all relations
+    // Respond with the vouchers
     res.status(200).json({ vouchers });
   } catch (error) {
     console.error('Error fetching vouchers:', error);
@@ -1840,7 +1809,10 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-export const getVoucher = async (req: Request, res: Response): Promise<void> => {
+export const getVoucher = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { listing_id } = req.params;
     console.log("Received listing_id:", listing_id);
@@ -1868,10 +1840,13 @@ export const getVoucher = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const editVoucher = async (req: Request, res: Response): Promise<void> => {
+export const editVoucher = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { listing_id } = req.params;
-    const updatedData = req.body;
+    const updatedData = req.body; // Ensure you're sending the correct fields from the frontend
 
     const voucherIdNum = parseInt(listing_id, 10);
     if (isNaN(voucherIdNum)) {
@@ -1894,19 +1869,6 @@ export const editVoucher = async (req: Request, res: Response): Promise<void> =>
     voucher.price = updatedData.price;
     voucher.discount = updatedData.discount;
     voucher.voucherImage = updatedData.voucherImage;
-
-    // Update reward item if provided, or unequip if null
-    if (updatedData.reward_item_id) {
-      const rewardItem = await Item.findOne({ where: { id: updatedData.reward_item_id } });
-      if (!rewardItem) {
-        res.status(404).json({ message: 'Reward item not found' });
-        return;
-      }
-      voucher.rewardItem = rewardItem;
-    } else {
-      // Unequip the reward item by setting it to null
-      voucher.rewardItem = null;
-    }
 
     await voucher.save();
 
