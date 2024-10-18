@@ -8,7 +8,7 @@ import { Outlet } from '../entities/Outlet';
 
 export const createAvatar = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { avatarType, baseId, hatId, shirtId, bottomId, outletId } = req.body;
+        const { avatarType, baseId, hatId, shirtId, bottomId, outletId, registrationId } = req.body;
         const userId = (req as any).user.id; // Get user ID from authenticated request
 
         let avatar: Avatar;
@@ -23,21 +23,26 @@ export const createAvatar = async (req: Request, res: Response): Promise<void> =
             await customer.save();
 
         } else if (avatarType === AvatarType.BUSINESS_REGISTER_BUSINESS) {
-            // Ensure you are querying the business register entity and not Outlet
-            
+            if (!registrationId) {
+                res.status(400).json({ message: 'Registration ID is required for business register avatar' });
+                return;
+            }
             const business_register_business = await Business_register_business.findOneOrFail({
-                where: { registration_id: userId }
+                where: { registration_id: registrationId }
             });
 
             avatar = Avatar.create({
                 avatarType,
-                business_register_business, // Associate avatar with the registered business
+                business_register_business,
             });
             business_register_business.avatar = avatar;
             await business_register_business.save();
 
         } else if (avatarType === AvatarType.OUTLET) {
-            // Query Outlet only when the avatarType is OUTLET
+            if (!outletId) {
+                res.status(400).json({ message: 'Outlet ID is required for outlet avatar' });
+                return;
+            }
             const outlet = await Outlet.findOneOrFail({ where: { outlet_id: outletId } });
             avatar = Avatar.create({
                 avatarType,
