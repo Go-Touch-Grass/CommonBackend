@@ -153,6 +153,37 @@ const main = async () => {
 					approved: true,
 				},
 				{
+					name: "Light Base",
+					type: ItemType.BASE,
+					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/main/base/avatar_light.png",
+					approved: true,
+				},
+				{
+					name: "Tan Base 1",
+					type: ItemType.BASE,
+					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/main/base/avatar_tan_1.png",
+					approved: true,
+				},
+				{
+					name: "Tan Base 2",
+					type: ItemType.BASE,
+					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/main/base/avatar_tan_2.png",
+					approved: true,
+				},
+				{
+					name: "Tan Base 3",
+					type: ItemType.BASE,
+					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/main/base/avatar_tan_3.png",
+					approved: true,
+				},
+				{
+					name: "Tan Base 4",
+					type: ItemType.BASE,
+					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/main/base/avatar_tan_4.png",
+					approved: true,
+				},
+
+				{
 					name: "Nature Base",
 					type: ItemType.BASE,
 					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/base/avatar_base_nature.png",
