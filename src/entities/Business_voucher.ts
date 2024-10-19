@@ -17,6 +17,7 @@ import { Outlet } from './Outlet';
 import { Customer_inventory } from "./Customer_inventory";
 import { Voucher_transaction } from "./Voucher_transaction";
 import { Item } from './Item';
+import { Customer_voucher } from "./Customer_vouchers";
 
 @Entity('business_voucher')
 export class Business_voucher extends BaseEntity {
@@ -95,6 +96,9 @@ export class Business_voucher extends BaseEntity {
     })
     customer_inventory: Customer_inventory[];
     */
+
+    @OneToMany(() => Customer_voucher, (customerVoucher) => customerVoucher.voucher)
+    voucherInstances: Customer_voucher[];
 
     @OneToMany(() => Voucher_transaction, transaction => transaction.voucher)
     transactions: Voucher_transaction[];

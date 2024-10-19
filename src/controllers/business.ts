@@ -22,10 +22,9 @@ import { Voucher_transaction } from '../entities/Voucher_transaction';
 import { Customer_account } from '../entities/Customer_account';
 import { Customer_inventory } from '../entities/Customer_inventory';
 
-
 export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { transactionId, redeemed } = req.body;
+    const { transactionId, redeemed } = req.body; // Assuming redeemed is a string ('yes', 'no', 'pending')
     const transactionIdNum = parseInt(transactionId, 10);
 
     if (isNaN(transactionIdNum)) {
@@ -33,9 +32,10 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
       return;
     }
 
+    // Find the transaction by ID
     const transaction = await Voucher_transaction.findOne({
       where: { id: transactionIdNum },
-      relations: ['voucher'], // Load the associated voucher
+      relations: ['voucher'], // Load the associated voucher if needed
     });
 
     if (!transaction || !transaction.voucher) {
@@ -43,37 +43,57 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
       return;
     }
 
-    if (transaction.used) {
+    // Check if the transaction is already redeemed
+    if (transaction.redeemed === 'yes') {
       res.status(400).json({ message: 'Voucher transaction already redeemed' });
       return;
     }
 
-    // Mark the transaction as used
-    transaction.used = redeemed;
+    // Update the transaction's redeemed status
+    transaction.redeemed = redeemed; // Set the redeemed status to the value from the request body
 
-    // If the voucher is being redeemed, find the corresponding customer inventory
-    const customerInventory = await Customer_inventory.findOne({
-      where: { customer_account: { id: transaction.customerId } }, // Use an object to reference the customer account
-      relations: ['vouchers'], // Load associated vouchers
-    });
+    // If the voucher is being redeemed ('yes'), find the corresponding customer inventory
+    if (redeemed === 'yes') {
+      const customerInventory = await Customer_inventory.findOne({
+        where: { customer_account: { id: transaction.customerId } }, // Use an object to reference the customer account
+        relations: ['voucherInstances'], // Load associated voucher instances
+      });
 
-    if (customerInventory) {
-      // Check if the customer inventory has the voucher in its collection
-      const hasVoucher = customerInventory.vouchers.some(v => v.listing_id === transaction.voucher.listing_id);
+      if (customerInventory) {
+        // Find the specific voucher instance in the customer's inventory
+        const customerVoucher = customerInventory.voucherInstances.find(v => v.id === transaction.voucher.listing_id);
 
-      if (hasVoucher) {
-        customerInventory.used = true; // Mark inventory as used
-        await customerInventory.save(); // Save the updated inventory
+        if (customerVoucher) {
+          // Deduct the quantity by 1 upon redemption
+          if (customerVoucher.quantity > 0) {
+            customerVoucher.quantity -= 1; // Decrease quantity by 1
+
+            // Save the updated voucher in the customer's inventory
+            await customerVoucher.save();
+
+            if (customerVoucher.quantity === 0) {
+              // Optional: Handle logic for when the voucher is fully used up, if needed
+              console.log('Voucher fully redeemed');
+            }
+          } else {
+            res.status(400).json({ message: 'Voucher quantity is already 0' });
+            return;
+          }
+        } else {
+          res.status(404).json({ message: 'Voucher not found in customer inventory' });
+          return;
+        }
       }
     }
 
-    await transaction.save(); // Save the updated transaction
+    // Save the updated transaction
+    await transaction.save();
 
     res.status(200).json({
-      message: 'Voucher transaction redeemed successfully',
+      message: 'Voucher transaction redeemed and quantity updated successfully',
       transaction: {
         id: transaction.id,
-        used: transaction.used,
+        redeemed: transaction.redeemed, // Return the updated redeemed status
         customerId: transaction.customerId,
         voucherId: transaction.voucherId,
       },
@@ -83,6 +103,8 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
 
 
 
@@ -128,7 +150,7 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
       customerName: customerMap[transaction.customerId] || 'Unknown',
       purchaseDate: transaction.purchaseDate,
       expirationDate: transaction.voucher.expirationDate.toISOString(),
-      amountSpent: transaction.gems_spent,
+      amountSpent: transaction.voucher.discountedPrice,
       redeemed: transaction.redeemed,
       used: transaction.used,
     }));
@@ -1521,11 +1543,11 @@ export const retrieveOutlet = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const outlet = await Outlet.findOne({ 
-      where: { 
+    const outlet = await Outlet.findOne({
+      where: {
         outlet_id: outletIdNum,
         isDeleted: false // Only retrieve non-deleted outlets
-      } 
+      }
     });
     if (!outlet) {
       res.status(404).json({ message: 'Outlet not found' });
@@ -1581,11 +1603,11 @@ export const editOutlet = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const outlet = await Outlet.findOne({ 
-      where: { 
+    const outlet = await Outlet.findOne({
+      where: {
         outlet_id: outletIdNum,
         isDeleted: false // Only edit non-deleted outlets
-      } 
+      }
     });
     if (!outlet) {
       res.status(404).json({ message: 'Outlet not found' });
