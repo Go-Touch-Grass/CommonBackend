@@ -227,19 +227,16 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
         res.status(500).json({ message: 'Internal server error' });
     }
 };
-
+{/* 
 export const redeemVoucherTransaction = async (req: Request, res: Response): Promise<void> => {
     try {
         const { transactionId } = req.params;
-
-
 
         const transactionIdNum = parseInt(transactionId, 10);
         if (isNaN(transactionIdNum)) {
             res.status(400).json({ message: 'Invalid transaction_id' });
             return;
         }
-
 
         const transaction = await Voucher_transaction.findOne({
             where: { id: transactionIdNum },
@@ -364,14 +361,6 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
     }
 };
 
-
-
-
-
-
-
-
-
 export const getVoucherInventory = async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = (req as any).user.id;
@@ -423,7 +412,7 @@ export const getVoucherInventory = async (req: Request, res: Response): Promise<
     }
 };
 
-
+*/}
 
 
 
