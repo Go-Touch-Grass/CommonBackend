@@ -13,6 +13,11 @@ import {
     getVoucherInventory,
     purchaseVoucher,
     redeemVoucherTransaction,
+    startGroupPurchase,
+    joinGroupPurchase,
+    getGroupPurchaseStatus,
+    cancelGroupPurchaseStatus,
+    getAllVouchersForCustomers,
 } from "../controllers/customer_account";
 import { UserRole } from '../entities/abstract/AbstractUser';
 import { updateCustomerAvatar } from "../controllers/customer_account";
@@ -34,4 +39,12 @@ router.post('/auth/top_up_gems', authMiddleware([UserRole.CUSTOMER]), topUpGemsC
 router.get('/auth/view_voucher_inventory', authMiddleware([UserRole.CUSTOMER]), getVoucherInventory);
 router.post("/auth/vouchers", authMiddleware([UserRole.CUSTOMER]), purchaseVoucher);
 router.put('/auth/voucher/redeem/:transactionId', redeemVoucherTransaction);
+
+router.get('/auth/vouchers/getAllVouchers', authMiddleware([UserRole.CUSTOMER]), getAllVouchersForCustomers);
+router.post('/auth/group-purchase/start', authMiddleware([UserRole.CUSTOMER]), startGroupPurchase);
+router.post('/auth/group-purchase/join', authMiddleware([UserRole.CUSTOMER]), joinGroupPurchase);
+router.get('/auth/group-purchase/status/:group_purchase_id', authMiddleware([UserRole.CUSTOMER]), getGroupPurchaseStatus);
+router.post('/auth/group-purchase/cancel', authMiddleware([UserRole.CUSTOMER]), cancelGroupPurchaseStatus);
+
+
 export { router as customerAccountRouter };

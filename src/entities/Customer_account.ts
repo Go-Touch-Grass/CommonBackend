@@ -12,7 +12,8 @@ import { AbstractUser, UserRole } from "./abstract/AbstractUser";
 import { Avatar } from "./Avatar";
 import { Customer_transaction } from "./Customer_transaction";
 import { Customer_inventory } from "./Customer_inventory";
-
+import { Customer_group_participant } from "./Customer_group_participant";
+import { Customer_group_purchase } from "./Customer_group_purchase";
 @Entity("Customer_account")
 export class Customer_account extends AbstractUser {
 	@PrimaryGeneratedColumn()
@@ -75,13 +76,17 @@ export class Customer_account extends AbstractUser {
 	)
 	transactions: Customer_transaction[];
 
-
-
-
 	@OneToOne(() => Customer_inventory, (customer_inventory) => customer_inventory.customer_account, {
 		onDelete: "CASCADE",
 	})
 	@JoinColumn({ name: "customer_id" }) // Ensure this is set correctly
 	customer_inventory: Customer_inventory;
+
+
+	@OneToMany(() => Customer_group_purchase, groupPurchase => groupPurchase.creator)
+	groupPurchases: Customer_group_purchase[];
+
+	@OneToMany(() => Customer_group_participant, participant => participant.customer)
+	groupParticipants: Customer_group_participant[];
 
 }

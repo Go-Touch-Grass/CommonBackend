@@ -58,4 +58,6 @@ router.put('/api/business/update_subscription/:subscriptionId', authMiddleware([
 
 router.post('/api/business/top_up_gems', authMiddleware([UserRole.BUSINESS]), topUpGemsBusiness);
 router.put('/api/business/update_subscription', authMiddleware([UserRole.BUSINESS]), updateSubscription);
+
+
 export { router as businessRouter };

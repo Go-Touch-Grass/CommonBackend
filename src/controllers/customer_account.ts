@@ -8,6 +8,178 @@ import { generateOTP, sendOTPEmail } from '../utils/otp';
 import { Customer_inventory } from "../entities/Customer_inventory";
 import { Business_voucher } from "../entities/Business_voucher";
 import { Voucher_transaction } from "../entities/Voucher_transaction";
+import { Customer_group_purchase } from "../entities/Customer_group_purchase";
+import { Customer_group_participant } from "../entities/Customer_group_participant";
+import { MoreThan } from "typeorm";
+
+
+
+export const startGroupPurchase = async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { voucher_id, group_size, expires_at } = req.body;
+    // Log the inputs for debugging
+    console.log('Received userId:', userId);
+    console.log('Received voucher_id:', voucher_id);
+    try {
+        const voucher = await Business_voucher.findOne({
+            where: { listing_id: voucher_id },
+        });
+        //const creator = await Customer_account.findOne(userId);
+        const creator = await Customer_account.findOne({
+            where: { id: userId },
+        });
+        console.warn(req.body.expires_at);
+
+
+        if (!voucher || !creator) {
+            return res.status(404).json({ message: "Voucher or creator not found" });
+        }
+
+        const groupPurchase = Customer_group_purchase.create({
+            voucher,
+            creator,
+            group_size,
+            current_size: 1, // Creator counts as the first member
+            status: "pending",
+            expires_at,
+        });
+
+        await groupPurchase.save();
+
+        // Add the creator as the first participant
+        const participant = Customer_group_participant.create({
+            groupPurchase,
+            customer: creator,
+            joined_at: new Date(),
+        });
+        await participant.save();
+
+        return res.status(201).json(groupPurchase);
+    } catch (error) {
+        console.error("Backend Error:", error); // Log the specific error
+        return res.status(500).json({ message: "Error starting group purchase", error: error.message });
+    }
+};
+
+export const joinGroupPurchase = async (req: Request, res: Response) => {
+    const { group_purchase_id } = req.body;
+    const customer_id = (req as any).user.id;
+    try {
+        const groupPurchase = await Customer_group_purchase.findOne({
+            where: { id: group_purchase_id },
+            relations: ["participants"]
+        });
+
+        const customer = await Customer_account.findOne({
+            where: { id: customer_id },
+        });
+
+        if (!groupPurchase || !customer) {
+            return res.status(404).json({ message: "Group purchase or customer not found" });
+        }
+
+        // Check if the group is full or expired
+        if (groupPurchase.current_size >= groupPurchase.group_size) {
+            return res.status(400).json({ message: "Group purchase is already complete" });
+        }
+        if (new Date() > groupPurchase.expires_at) {
+            return res.status(400).json({ message: "Group purchase has expired" });
+        }
+
+        // Add the new participant
+        const participant = Customer_group_participant.create({
+            groupPurchase,
+            customer,
+            joined_at: new Date(),
+        });
+        await participant.save();
+
+        // Update the group size
+        groupPurchase.current_size += 1;
+        if (groupPurchase.current_size === groupPurchase.group_size) {
+            groupPurchase.status = "complete";
+        }
+        await groupPurchase.save();
+
+        return res.status(200).json(groupPurchase);
+    } catch (error) {
+        return res.status(500).json({ message: "Error joining group purchase", error });
+    }
+};
+
+export const getGroupPurchaseStatus = async (req: Request, res: Response) => {
+    const { group_purchase_id } = req.params;
+
+    try {
+        const groupPurchase = await Customer_group_purchase.findOne({
+            where: { id: Number(group_purchase_id) },
+            relations: ["voucher", "participants"],
+        });
+
+        if (!groupPurchase) {
+            return res.status(404).json({ message: "Group purchase not found" });
+        }
+
+        return res.status(200).json(groupPurchase);
+    } catch (error) {
+        return res.status(500).json({ message: "Error fetching group purchase status", error });
+    }
+};
+
+export const cancelGroupPurchaseStatus = async (req: Request, res: Response) => {
+    const { group_purchase_id, creator_id } = req.body;
+
+    try {
+        // Fetch the group purchase
+        const groupPurchase = await Customer_group_purchase.findOne({
+            where: { id: Number(group_purchase_id) },
+            relations: ["creator"],
+        });
+
+        if (!groupPurchase) {
+            return res.status(404).json({ message: "Group purchase not found." });
+        }
+
+        // Ensure only the creator can cancel it and it's still pending
+        if (groupPurchase.creator.id !== creator_id || groupPurchase.status !== "pending") {
+            return res.status(403).json({ message: "You can only cancel a pending group purchase as the creator." });
+        }
+
+        // Mark the group purchase as canceled
+        groupPurchase.status = "canceled";
+        await groupPurchase.save();
+
+        return res.status(200).json({ message: "Group purchase canceled successfully." });
+
+    } catch (error) {
+        console.error("Error canceling group purchase:", error);
+        return res.status(500).json({ message: "Error canceling group purchase" });
+    }
+};
+
+// TEMPORARY Endpoint to get all available vouchers for customers
+export const getAllVouchersForCustomers = async (req: Request, res: Response) => {
+    try {
+        // Optional: Add filtering logic such as only fetching active or non-expired vouchers
+        const vouchers = await Business_voucher.find({
+            relations: ['business_register_business', 'outlet'], // Include business and outlet relations if needed
+            where: {
+                // You can add any filter conditions here (e.g., expiration date)
+                expirationDate: MoreThan(new Date()) // Only show non-expired vouchers
+            }
+        });
+
+        if (!vouchers || vouchers.length === 0) {
+            return res.status(404).json({ message: 'No vouchers found' });
+        }
+
+        return res.status(200).json({ vouchers });
+    } catch (error) {
+        console.error('Error fetching vouchers:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 
 export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
     try {

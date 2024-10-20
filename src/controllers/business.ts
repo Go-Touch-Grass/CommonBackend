@@ -16,6 +16,7 @@ import { Voucher_transaction } from '../entities/Voucher_transaction';
 import { Customer_account } from '../entities/Customer_account';
 import { Customer_inventory } from '../entities/Customer_inventory';
 
+
 export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
     try {
         const { transactionId, redeemed } = req.body;
@@ -1341,7 +1342,9 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
 
 export const createVoucher = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { name, description, price, discount, duration, business_id, outlet_id } = req.body;
+        const { name, description, price, discount, duration,
+            business_id, outlet_id,
+            enableGroupPurchase, groupSize, groupDiscount } = req.body;
         const username = (req as any).user.username;
 
         const businessAccount = await Business_account.findOne({ where: { username }, relations: ['business', 'outlets'] });
@@ -1367,6 +1370,9 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
             discount,
             duration,
             voucherImage: `uploads/vouchers/${req.file.filename}`, // store relative path
+            groupPurchaseEnabled: enableGroupPurchase,
+            groupSize,
+            groupDiscount,
         });
 
         // If business_id is provided, associate with main business
@@ -1611,6 +1617,7 @@ export const searchVouchers = async (req: Request, res: Response): Promise<void>
         return;
     }
 };
+
 
 export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
     try {

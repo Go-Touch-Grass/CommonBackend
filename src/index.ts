@@ -31,8 +31,8 @@ import { Business_voucher } from "./entities/Business_voucher";
 import { Customer_inventory } from "./entities/Customer_inventory";
 import { Voucher_transaction } from "./entities/Voucher_transaction";
 
-
-
+import { Customer_group_purchase } from "./entities/Customer_group_purchase";
+import { Customer_group_participant } from "./entities/Customer_group_participant";
 
 dotenv.config();
 
@@ -56,7 +56,9 @@ export const AppDataSource = new DataSource({
         Avatar,
         Customer_transaction,
         Customer_inventory,
-        Voucher_transaction
+        Voucher_transaction,
+        Customer_group_purchase,
+        Customer_group_participant,
 
     ],
     synchronize: true,
