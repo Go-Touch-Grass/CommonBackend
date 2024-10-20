@@ -11,6 +11,10 @@ import {
     getCustomerByCustomerId,
     getBusinessTransactionsByBusinessId,
     getCustomerTransactionsByCustomerId,
+    banUnbanBusiness,
+    getAllPendingItemRequests,
+    getItemRequestById,
+    reviewPendingRequestById
 } from "../controllers/admin";
 
 const router = express.Router();
@@ -24,6 +28,10 @@ router.get("/api/admin/registration", authMiddleware(["admin"]), getAllPendingBu
 router.get("/api/admin/registration/:registration_id", authMiddleware(["admin"]), getPendingBusinessRegistrationByRegistrationId);
 router.put("/api/admin/registration/:registration_id", authMiddleware(["admin"]), reviewPendingBusinessRegistrationByRegistrationId);
 router.get("/api/admin/business/:business_id/transactions", authMiddleware(["admin"]), getBusinessTransactionsByBusinessId);
+router.put("/api/admin/business/:business_id/updateBanStatus", authMiddleware(["admin"]),banUnbanBusiness);
+router.get("/api/admin/item_requests", authMiddleware(["admin"]), getAllPendingItemRequests);
+router.get("/api/admin/item_requests/:id", authMiddleware(["admin"]), getItemRequestById);
+router.put("/api/admin/item_requests/:id", authMiddleware(["admin"]), reviewPendingRequestById);
 
 // Customer-related routes below
 router.get("/api/admin/customer", authMiddleware(["admin"]), getAllCustomers);

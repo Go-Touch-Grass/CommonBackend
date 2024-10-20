@@ -1,13 +1,14 @@
 import { BaseEntity, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Business_register_business } from "./Business_register_business";
 import { Outlet } from "./Outlet";
-import { AbstractUser, UserRole } from "./abstract/AbstractUser";
+import { UserRole } from "./abstract/AbstractUser";
 import { Business_transaction } from "./Business_transaction";
 import { Avatar } from "./Avatar";
 import { Item } from "./Item";
+import { AbstractStripeUser } from "./abstract/AbstractStripeUser";
 
 @Entity('business_account')
-export class Business_account extends AbstractUser {
+export class Business_account extends AbstractStripeUser {
     @PrimaryGeneratedColumn()
     business_id: number;
 
@@ -25,10 +26,10 @@ export class Business_account extends AbstractUser {
 
     @Column()
     password: string;
-    */
 
     @Column()
     email: string;
+    */
 
     @Column({ nullable: true })
     profileImage: string;
@@ -64,12 +65,17 @@ export class Business_account extends AbstractUser {
     @Column({ type: 'int', default: 0 })
     gem_balance: number; // Should not initialize here, default is set to 0
 
+    @Column({ type: 'int', default: 0 })
+    min_gem_balance: number; // Should not initialize here, default is set to 0
+
     @OneToMany(() => Business_transaction, business_transaction => business_transaction.business_account, { cascade: true, onDelete: "CASCADE" })
     transactions: Business_transaction[];
 
-    @OneToMany(() => Avatar, avatar => avatar.business)
-    avatars: Avatar[];
+    @Column()
+    banStatus: boolean;
 
-    @OneToMany(() => Item, item => item.business)
-    items: Item[];
+    @Column({
+        nullable: true,
+    })
+    banRemarks: string; // reason for ban
 }

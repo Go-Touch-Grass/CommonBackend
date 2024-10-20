@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import { Business_account } from '../entities/Business_account';
 import { Business_register_business, statusEnum } from '../entities/Business_register_business';
 import { Customer_account } from '../entities/Customer_account';
+import { Item } from '../entities/Item'
 
 export const loginAdmin = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -51,6 +52,56 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
         });
     }
 }
+
+export const banUnbanBusiness = async (
+    req: Request,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const { business_id } = req.params;
+      const id = parseInt(business_id);
+      const { status, remarks } = req.body;
+      const business = await Business_account.findOne({
+        where: { business_id: id },
+        relations: ['business', 'outlets']
+      });
+  
+      if (!business) {
+        res.status(400).json({
+          status: 400,
+          message: "Business registration not found",
+        });
+        return;
+      }
+  
+      business.banStatus = status;
+      business.banRemarks = remarks;
+
+         // Check if 'business_register_business' exists and update its banStatus
+    if (business.business) {
+        business.business.banStatus = status;
+        await business.business.save(); // Ensure you're saving the loaded entity
+      }
+  
+      // Check if outlets exist and update banStatus for each outlet
+      if (business.outlets && business.outlets.length > 0) {
+        for (let outlet of business.outlets) {
+          outlet.banStatus = status;
+          await outlet.save(); // Save each outlet entity after updating banStatus
+        }
+      }
+  
+      await business.save();
+  
+      res.status(200).json(business);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        status: 500,
+        message: `Failed to update business ban status ${error}`,
+      });
+    }
+  };
 
 // Business-related business logic below
 
@@ -226,6 +277,79 @@ export const getCustomerTransactionsByCustomerId = async (req: Request, res: Res
         res.status(500).json({
             status: 500,
             message: 'Failed to fetch customer transactions'
+        });
+    }
+}
+
+export const getAllPendingItemRequests = async (req: Request, res: Response): Promise<void> => {
+    try{
+        const pendingItemRequests = await Item.find({ 
+            where: { status: statusEnum.PENDING }, // Fetch all pending item requests
+        });
+        res.status(200).json(pendingItemRequests);
+
+    }catch(error){
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to fetch item requests'
+        });
+    }
+}
+
+export const getItemRequestById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const requestId = parseInt(id);
+        const item = await Item.findOne({
+            where: { id: requestId },
+            //relations: ['transactions']  
+        });
+
+        if (!item) {
+            res.status(400).json({
+                status: 400,
+                message: 'Item not found'
+            });
+            return;
+        }
+
+        res.status(200).json(item);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to fetch item'
+        });
+    }
+}
+
+export const reviewPendingRequestById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const requestId = parseInt(id);
+        const { status, remarks } = req.body;
+        const pendingItemRequest = await Item.findOneBy({ id: requestId }); 
+
+        if (!pendingItemRequest) {
+            res.status(400).json({
+                status: 400,
+                message: 'Item Request not found'
+            });
+            return;
+        }
+
+        pendingItemRequest.status = status;
+        pendingItemRequest.remarks = remarks;
+
+        await pendingItemRequest.save();
+
+        res.status(200).json(pendingItemRequest);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            status: 500,
+            message: 'Failed to update item request'
         });
     }
 }

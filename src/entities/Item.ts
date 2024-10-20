@@ -1,5 +1,6 @@
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
-import { Business_account } from "./Business_account";
+import { Business_register_business, statusEnum } from "./Business_register_business";
+import { Outlet } from "./Outlet";
 
 export enum ItemType {
     BASE = 'base',
@@ -25,13 +26,27 @@ export class Item extends BaseEntity {
     @Column()
     filepath: string;
 
-    @Column({ default: false })
-    approved: boolean;
+    @Column({ type: "enum", enum: statusEnum, default: statusEnum.APPROVED })
+    status: statusEnum;
 
     @Column({ nullable: true })
-    business_id: number;
+    remarks: string;
 
-    @ManyToOne(() => Business_account, business => business.items)
-    @JoinColumn({ name: 'business_id' })
-    business: Business_account;
+    @ManyToOne(() => Business_register_business, business => business.items, { nullable: true })
+    @JoinColumn({ name: 'registration_id' })
+    business_register_business: Business_register_business;
+
+    @ManyToOne(() => Outlet, outlet => outlet.items, { nullable: true })
+    @JoinColumn({ name: 'outlet_id' })
+    outlet: Outlet | null;
+
+    @Column({ type: 'float', nullable: true })
+    scale: number;
+
+    @Column({ type: 'float', nullable: true })
+    xOffset: number;
+
+    @Column({ type: 'float', nullable: true })
+    yOffset: number;
+
 }

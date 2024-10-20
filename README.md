@@ -10,7 +10,7 @@
 6. In the `.env` file, add the email credentials:<br>
 EMAIL_USER=<code>gotouchgrass33@gmail.com</code><br>
 EMAIL_PASS=<code>lhrt uxql byis dntd</code>
-7. In the `.env` file, add the Stripe keys according to the `env.example`. Refer to the "Secret List" Google Doc on our shared Google Drive folder
+7. In the `.env` file, add the Stripe keys according to the `.env.example`. Refer to the "Secret List" Google Doc on our shared Google Drive folder
 
 ## Running
 

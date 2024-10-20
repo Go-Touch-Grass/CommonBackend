@@ -1,4 +1,4 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { BaseEntity, Column, Entity } from "typeorm";
 
 export enum UserRole {
     ADMIN = "admin",
@@ -7,7 +7,7 @@ export enum UserRole {
 }
 
 @Entity()
-export class AbstractUser extends BaseEntity {
+export abstract class AbstractUser extends BaseEntity {
     @Column({
         unique: true
     })

@@ -16,8 +16,8 @@ export class Voucher_transaction extends BaseEntity {
     @Column()
     purchaseDate: Date;
 
-    @Column({ default: false })
-    redeemed: boolean;
+    @Column({ default: "false" })
+    redeemed: string;
 
     @Column({ type: "int" })
     gems_spent: number;

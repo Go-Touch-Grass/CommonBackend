@@ -4,7 +4,9 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { Avatar } from "../entities/Avatar";
 import { Customer_transaction } from "../entities/Customer_transaction";
+import { BusinessAccountSubscription } from '../entities/Business_account_subscription';
 import { generateOTP, sendOTPEmail } from '../utils/otp';
+import { stripe } from "../index";
 import { Customer_inventory } from "../entities/Customer_inventory";
 import { Business_voucher } from "../entities/Business_voucher";
 import { Voucher_transaction } from "../entities/Voucher_transaction";
@@ -913,49 +915,154 @@ export const updateCustomerAvatar = async (
     }
 };
 
-export const topUpGemsCustomer = async (req: Request, res: Response): Promise<void> => {
+export const verifyTopUpCustomer = async (req: Request, res: Response): Promise<void> => {
     try {
         const {
-            currency_cents: currencyCents,
-            gems_added: gemsAdded,
+            paymentIntentId,
+            gemsAdded,
         } = req.body;
 
-        if (!currencyCents || currencyCents <= 0) {
-            res.status(400).json({ message: 'Invalid currency amount' });
+        if (!paymentIntentId || !gemsAdded || gemsAdded <= 0) {
+            res.status(400).json({ success: false, message: 'Invalid request parameters' });
+            return;
         }
 
-        if (!gemsAdded || gemsAdded <= 0) {
-            res.status(400).json({ message: 'Invalid gem amount' });
+        // Retrieve the PaymentIntent from Stripe to verify payment status
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+        if (paymentIntent.status !== 'succeeded') {
+            res.status(400).json({ success: false, message: 'Payment not completed or failed' });
+            return;
         }
 
+        // Retrieve user from JWT token
         const userId = (req as any).user.id;
         const customerAccount = await Customer_account.findOne({ where: { id: userId } });
 
         if (!customerAccount) {
-            res.status(404).json({ message: "User not found" });
-        } else {
-            // Add the top-up amount to the existing balance
-            const currentGemBalance = parseFloat(customerAccount.gem_balance.toString());
-            const newGemBalance = currentGemBalance + gemsAdded;
-
-            // Update the balance and save
-            customerAccount.gem_balance = parseFloat(newGemBalance.toFixed(2));
-            await customerAccount.save();
-
-            const currencyDollars = currencyCents / 100;  // Convert cents to dollars
-
-            const customerTransaction = Customer_transaction.create({
-                currency_amount: currencyDollars,
-                gems_added: gemsAdded,
-                customer_account: customerAccount
-            });
-            await customerTransaction.save();
-
-            // Respond with the updated balance
-            res.status(200).json({ message: 'Gems topped up successfully', balance: customerAccount.gem_balance });
+            res.status(404).json({ success: false, message: 'Account not found' });
+            return;
         }
+
+        // Check if this payment intent has already been processed
+        const transactionExists = await Customer_transaction.findOne({ where: { stripe_payment_intent_id: paymentIntentId } });
+        if (transactionExists) {
+            res.status(400).json({ success: false, message: 'This payment has already been processed.' });
+            return;
+        }
+
+        // Add the gems to the customer account balance
+        const currentGemBalance = parseFloat(customerAccount.gem_balance.toString());
+        const newGemBalance = currentGemBalance + gemsAdded;
+
+        // Update the balance and save
+        customerAccount.gem_balance = parseFloat(newGemBalance.toFixed(2));
+        await customerAccount.save();
+
+        // Log the transaction in the customer transaction table
+        const currencyDollars = paymentIntent.amount_received / 100; // Stripe provides amount in cents
+        const customerTransaction = Customer_transaction.create({
+            currency_amount: currencyDollars,
+            gems_added: gemsAdded,
+            customer_account: customerAccount,
+            stripe_payment_intent_id: paymentIntent.id  // Store PaymentIntent ID to ensure idempotency
+        });
+        await customerTransaction.save();
+
+        // Respond with the updated balance
+        res.status(200).json({ success: true, message: 'Gems topped up successfully', balance: customerAccount.gem_balance });
+        return;
+
     } catch (error) {
-        console.error('Error topping up gems:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Error verifying payment and topping up gems:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export const getAllValidSubscription = async (req: Request, res: Response) => {
+    try {
+        // Fetch subscriptions with status 'active'
+        const activeSubscriptions = await BusinessAccountSubscription.find({
+            where: {
+                status: "active",
+            },
+            relations: ['business_register_business', 'business_register_business.avatar', 'outlet', 'outlet.avatar'], // Include related business, outlet, and avatars
+        });
+
+        if (activeSubscriptions.length === 0) {
+            return res.status(404).json({ message: 'No active subscriptions found' });
+        }
+
+        const subscriptionsWithValidBanStatus = activeSubscriptions.filter(subscription => {
+            const isOutlet = !!subscription.outlet;
+
+            if (isOutlet) {
+                const outletBanStatus = subscription.outlet?.banStatus;
+                return outletBanStatus === false
+            } else {
+                const businessBanStatus = subscription.business_register_business?.banStatus;
+                return businessBanStatus === false
+            }
+        });
+
+        // Map the subscriptions to include the business or outlet details and avatar information
+        const subscriptionsWithAvatars = subscriptionsWithValidBanStatus.map((subscription) => {
+            // Check if the subscription is for an outlet
+            const isOutlet = !!subscription.outlet;
+
+            // If it's an outlet, fetch the outlet's avatar; otherwise, fetch the business avatar
+            const avatar = isOutlet
+                ? subscription.outlet?.avatar
+                : subscription.business_register_business?.avatar;
+
+            return {
+                subscriptionId: subscription.subscription_id,
+                title: subscription.title,
+                description: subscription.description,
+                status: subscription.status,
+                expirationDate: subscription.expiration_date,
+                distanceCoverage: subscription.distance_coverage,
+                branch: isOutlet
+                    ? {
+                        entityType: 'Outlet',
+                        outletId: subscription.outlet?.outlet_id,
+                        outletName: subscription.outlet?.outlet_name,
+                        location: subscription.outlet?.location,
+                        description: subscription.outlet?.description,
+                        banStatus: subscription.outlet?.banStatus,
+                        avatar: avatar
+                            ? {
+                                avatarId: avatar.id,
+                                base: avatar.base,
+                                hat: avatar.hat,
+                                shirt: avatar.shirt,
+                                bottom: avatar.bottom,
+                            }
+                            : null,
+                    }
+                    : {
+                        entityType: 'Business_register_business',
+                        registrationId: subscription.business_register_business?.registration_id,
+                        entityName: subscription.business_register_business?.entityName,
+                        location: subscription.business_register_business?.location,
+                        banStatus: subscription.business_register_business?.banStatus,
+                        category: subscription.business_register_business?.category,
+                        avatar: avatar
+                            ? {
+                                avatarId: avatar.id,
+                                base: avatar.base,
+                                hat: avatar.hat,
+                                shirt: avatar.shirt,
+                                bottom: avatar.bottom,
+                            }
+                            : null,
+                    },
+            };
+        });
+
+        return res.status(200).json(subscriptionsWithAvatars);
+    } catch (error) {
+        console.error('Error fetching subscriptions:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 };

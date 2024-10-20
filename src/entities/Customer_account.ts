@@ -7,21 +7,27 @@ import {
 	PrimaryGeneratedColumn,
 	CreateDateColumn,
 	UpdateDateColumn,
+	ManyToMany,
+	JoinTable
 } from "typeorm";
-import { AbstractUser, UserRole } from "./abstract/AbstractUser";
+import { UserRole } from "./abstract/AbstractUser";
 import { Avatar } from "./Avatar";
 import { Customer_transaction } from "./Customer_transaction";
+import { AbstractStripeUser } from "./abstract/AbstractStripeUser";
+import { Item } from "./Item";
 import { Customer_inventory } from "./Customer_inventory";
 import { Customer_group_participant } from "./Customer_group_participant";
 import { Customer_group_purchase } from "./Customer_group_purchase";
-@Entity("Customer_account")
-export class Customer_account extends AbstractUser {
+
+@Entity("customer_account")
+export class Customer_account extends AbstractStripeUser {
 	@PrimaryGeneratedColumn()
 	id: number;
 
 	@Column()
 	fullName: string;
 
+	/* extended from AbstractUser
 	@Column({
 		unique: true,
 	})
@@ -34,6 +40,7 @@ export class Customer_account extends AbstractUser {
 
 	@Column()
 	password: string;
+	*/
 
 	@Column({ default: 0 })
 	exp: number;
@@ -75,6 +82,64 @@ export class Customer_account extends AbstractUser {
 		(transaction) => transaction.customer_account
 	)
 	transactions: Customer_transaction[];
+
+	@ManyToMany(() => Customer_account)
+	@JoinTable({
+		name: "customer_friends",
+		joinColumn: {
+			name: "customer_id",
+			referencedColumnName: "id"
+		},
+		inverseJoinColumn: {
+			name: "friend_id",
+			referencedColumnName: "id"
+		}
+	})
+	friends: Customer_account[];
+
+	@ManyToMany(() => Customer_account)
+	@JoinTable({
+		name: "friend_requests",
+		joinColumn: {
+			name: "sender_id",
+			referencedColumnName: "id"
+		},
+		inverseJoinColumn: {
+			name: "receiver_id",
+			referencedColumnName: "id"
+		}
+	})
+	sentFriendRequests: Customer_account[];
+
+	@ManyToMany(() => Customer_account)
+	@JoinTable({
+		name: "friend_requests",
+		joinColumn: {
+			name: "receiver_id",
+			referencedColumnName: "id"
+		},
+		inverseJoinColumn: {
+			name: "sender_id",
+			referencedColumnName: "id"
+		}
+	})
+	receivedFriendRequests: Customer_account[];
+
+	@ManyToMany(() => Item)
+	@JoinTable({
+		name: "customer_owned_items",
+		joinColumn: {
+			name: "customer_id",
+			referencedColumnName: "id"
+		},
+		inverseJoinColumn: {
+			name: "item_id",
+			referencedColumnName: "id"
+		}
+	})
+	ownedItems: Item[];
+
+
 
 	@OneToOne(() => Customer_inventory, (customer_inventory) => customer_inventory.customer_account, {
 		onDelete: "CASCADE",
