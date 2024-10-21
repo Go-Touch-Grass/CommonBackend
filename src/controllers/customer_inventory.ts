@@ -8,33 +8,6 @@ import { In, IsNull } from "typeorm";
 import { statusEnum } from "../entities/Business_register_business";
 import { Customer_voucher } from "../entities/Customer_vouchers";
 
-
-export const updateVoucherStatus = async (req, res) => {
-    const { voucherId, status } = req.body; // Get voucherId and status from request body
-
-    if (typeof voucherId !== 'number' || typeof status !== 'boolean') {
-        return res.status(400).json({ error: 'Voucher ID must be a number and status must be a boolean value' });
-    }
-
-    try {
-        // Find the voucher by ID
-        const voucher = await Customer_voucher.findOne({ where: { id: voucherId } });
-
-        if (!voucher) {
-            return res.status(404).json({ error: 'Voucher not found' });
-        }
-
-        // Update the voucher's status
-        voucher.status = false; // Assuming `redeemed` is the field to be updated
-        await voucher.save();
-
-        return res.status(200).json({ message: 'Voucher status updated successfully', voucher });
-    } catch (error) {
-        console.error('Error updating voucher status:', error);
-        return res.status(500).json({ error: 'An error occurred while updating the voucher status' });
-    }
-};
-
 export const getVoucherInventory = async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = (req as any).user.id;
@@ -79,7 +52,6 @@ export const getVoucherInventory = async (req: Request, res: Response): Promise<
                 redeemed: transaction ? transaction.redeemed : false,
                 transaction_id: transaction ? transaction.id : null,
                 quantity: customerVoucher.quantity,
-                status: customerVoucher.status
             };
         });
 
