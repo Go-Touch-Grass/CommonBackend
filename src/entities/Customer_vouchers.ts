@@ -17,4 +17,7 @@ export class Customer_voucher extends BaseEntity {
 
     @Column({ type: 'int', default: 0 })
     quantity: number;
+
+    @Column({ default: true })
+    status: boolean;
 }

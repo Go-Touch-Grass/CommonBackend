@@ -151,17 +151,6 @@ export const joinGroupPurchase = async (req: Request, res: Response) => {
             return res.status(400).json({ message: "Customer has already joined this group purchase." });
         }
 
-        {/* 
-        // Create and save the new participant with correct associations
-        const participant = new Customer_group_participant();
-        participant.groupPurchase = groupPurchase;
-        participant.customer = customer;
-        participant.joined_at = new Date();
-        participant.payment_status = "pending";
-        console.log("Participant before saving:", participant.id);
-        await participant.save();
-        */}
-
         // Add the new participant
         const participant = Customer_group_participant.create({
             //groupPurchase: { id: group_purchase_id },

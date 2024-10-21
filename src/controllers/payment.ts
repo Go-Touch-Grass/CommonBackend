@@ -4,6 +4,8 @@ import { Customer_group_purchase } from '../entities/Customer_group_purchase';
 import { Customer_account } from '../entities/Customer_account';
 import { UserRole } from '../entities/abstract/AbstractUser';
 import { Business_account } from '../entities/Business_account';
+import { Customer_inventory } from '../entities/Customer_inventory';
+import { Customer_voucher } from '../entities/Customer_vouchers';
 
 
 type PaymentIntentInfo = {
@@ -14,7 +16,7 @@ type PaymentIntentInfo = {
 
 export const finalizeGroupPurchase = async (req: Request, res: Response) => {
   const { group_purchase_id } = req.body;
-  console.log('Received group_purchase_id:', group_purchase_id);
+  //console.log('Received group_purchase_id:', group_purchase_id);
 
   if (!group_purchase_id) {
     return res.status(400).json({ message: "Group purchase ID is missing." });
@@ -44,27 +46,45 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
     const conversionRate = 10;
     const finalPriceInGems = Math.round(finalPricePerUser * conversionRate);
 
-    let allPaymentsSuccessful = true;
-    const failedParticipants: number[] = [];
-    //console.log("looping through participants");
-    // Iterate over each participant and charge gems
+    let allParticipantsHaveEnoughGems = true;
+    const insufficientGemsParticipants: Array<{ username: string, balance: number }> = [];
+    // Check all participants' gem balance
     for (const participant of groupPurchase.participants) {
-      console.log(`Processing participant ${participant.customer.id}`);
       const customer = await Customer_account.findOne({
         where: { id: participant.customer.id },
       });
 
       if (!customer) continue;
 
-      try {
-        // Check if the customer has enough gems
-        if (customer.gem_balance < finalPriceInGems) {
-          console.error(`Insufficient gems for participant ${participant.customer.id}`);
-          failedParticipants.push(participant.customer.id);
-          allPaymentsSuccessful = false;
-          continue; // Skip to the next participant
-        }
+      // Check if the customer has enough gems
+      if (customer.gem_balance < finalPriceInGems) {
+        insufficientGemsParticipants.push({
+          username: customer.username,
+          balance: customer.gem_balance,
+        });
+        allParticipantsHaveEnoughGems = false;
+      }
+    }
 
+    // If any participants have insufficient gems, return an error message
+    if (!allParticipantsHaveEnoughGems) {
+      return res.status(400).json({
+        message: "Some participants have insufficient gems.",
+        insufficientParticipants: insufficientGemsParticipants
+      });
+    }
+
+    // Process payments for all participants if all have sufficient gems
+    let allPaymentsSuccessful = true;
+    // Iterate over each participant and charge gems
+    for (const participant of groupPurchase.participants) {
+      //console.log(`Processing participant ${participant.customer.id}`);
+      const customer = await Customer_account.findOne({
+        where: { id: participant.customer.id },
+      });
+
+      if (!customer) continue;
+      try {
         // Deduct the required gems from the customer's gem balance
         customer.gem_balance -= finalPriceInGems;
         await customer.save();
@@ -73,6 +93,42 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
         participant.payment_status = 'paid';
         participant.payment_completed_at = new Date();
         await participant.save();
+
+
+        ///////////// This part need change, 
+        /*
+               // Add Voucher to Inventory:
+               // Fetch or create the customer's inventory
+               let inventory = await Customer_inventory.findOne({
+                 where: { customer_account: { id: participant.customer.id } },
+                 relations: ['voucherInstances'],
+               });
+       
+               if (!inventory) {
+                 inventory = new Customer_inventory();
+                 inventory.customer_account = customer;
+                 await inventory.save();
+               }
+       
+               // Check if the customer already owns this voucher
+               let customerVoucher = await Customer_voucher.findOne({
+                 where: { inventory: { id: inventory.id }, voucher: { listing_id: groupPurchase.voucher.listing_id } },
+               });
+       
+               if (customerVoucher) {
+                 // If they already own the voucher, update the quantity
+                 //customerVoucher.quantity += quantity;
+               } else {
+                 // Otherwise, create a new Customer_voucher entry
+                 customerVoucher = new Customer_voucher();
+                 customerVoucher.inventory = inventory;
+                 customerVoucher.voucher = groupPurchase.voucher;
+                 customerVoucher.quantity = 1;
+               }
+               await customerVoucher.save();
+       */
+        //////////////////
+
 
       } catch (error) {
         console.error(`Payment failed for participant ${participant.customer.id}:`, error);
@@ -86,13 +142,9 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
     // If any payments failed, return an error and do not mark the group purchase as completed
     if (!allPaymentsSuccessful) {
       return res.status(500).json({
-        message: `One or more payments failed. Group purchase could not be completed. Failed participants: ${failedParticipants.join(", ")}`,
+        message: "One or more payments failed. Group purchase could not be completed"
       });
     }
-
-    // Mark the group purchase as completed if all payments were successful
-    groupPurchase.status = 'completed';
-    await groupPurchase.save();
 
     // Return success response
     return res.status(200).json({ message: "Group purchase completed successfully, and all users have been charged in gems." });
