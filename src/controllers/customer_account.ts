@@ -208,7 +208,7 @@ export const getGroupPurchaseStatus = async (req: Request, res: Response) => {
     try {
         const groupPurchase = await Customer_group_purchase.findOne({
             where: { id: Number(group_purchase_id) },
-            relations: ["voucher", "participants"],
+            relations: ["voucher", "participants", "creator"],
         });
 
         if (!groupPurchase) {
