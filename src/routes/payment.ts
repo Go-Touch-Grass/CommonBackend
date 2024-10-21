@@ -12,5 +12,6 @@ router.get('/api/payment/get-payment-method-id', authMiddleware([UserRole.BUSINE
 router.delete('/api/payment/delete-payment-method-id', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), deletePaymentMethodId);
 router.get('/api/payment/get-payment-method', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), getPaymentMethod);
 router.get('/api/payment/get-user-stripe-id-and-ephemeral-key', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), getUserStripeIdAndEphemeralKey);
+
 router.post('/api/payment/group-purchase/finalize', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), finalizeGroupPurchase);
 export { router as paymentRouter };

@@ -16,7 +16,7 @@ import { Customer_group_participant } from "./Customer_group_participant";
 
 export enum statusEnum {
     PENDING = 'pending',
-    COMPLETE = 'complete',
+    COMPLETED = 'completed',
     EXPIRED = 'expired'
 }
 
@@ -53,12 +53,14 @@ export class Customer_group_purchase extends BaseEntity {
     @JoinColumn({ name: "voucher_id" })
     voucher: Business_voucher;
 
-    @ManyToOne(() => Customer_account, customer => customer.groupPurchases)
+
+    @ManyToOne(() => Customer_account, customer => customer.ownedGroupPurchases)
     @JoinColumn({ name: "creator_id" })
     creator: Customer_account;
 
+
     // Link to the participants of this group purchase
-    @OneToMany(() => Customer_group_participant, participant => participant.groupPurchase)
+    @OneToMany(() => Customer_group_participant, participant => participant.groupPurchase, { eager: true })
     participants: Customer_group_participant[];
 
 

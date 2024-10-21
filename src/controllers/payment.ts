@@ -9,56 +9,99 @@ import { Business_account } from '../entities/Business_account';
 type PaymentIntentInfo = {
   customer_id: number;
   clientSecret: string | null;
+  paymentIntentId: string;
 };
 
 export const finalizeGroupPurchase = async (req: Request, res: Response) => {
-  const { group_purchase_id, amount, currency } = req.body;
+  const { group_purchase_id } = req.body;
+  console.log('Received group_purchase_id:', group_purchase_id);
 
+  if (!group_purchase_id) {
+    return res.status(400).json({ message: "Group purchase ID is missing." });
+  }
   try {
     // Fetch group purchase and ensure it's completed
     const groupPurchase = await Customer_group_purchase.findOne({
       where: { id: Number(group_purchase_id) },
-      relations: ["participants", "voucher"],
+      relations: ["participants", "participants.customer", "voucher"],
     });
 
-    if (!groupPurchase || groupPurchase.status !== "complete") {
+    if (!groupPurchase || groupPurchase.status !== "completed") {
       return res.status(400).json({ message: "Group purchase is not complete or does not exist." });
     }
 
-    // Iterate over each participant and create a payment intent
-    const paymentIntents: PaymentIntentInfo[] = [];
+    // Check if the group is full and all participants have joined
+    if (groupPurchase.current_size < groupPurchase.group_size) {
+      return res.status(400).json({ message: "Group is not yet full." });
+    }
+
+    // Calculate the final price per user, including both voucher discount and group discount
+    const voucherPrice = groupPurchase.voucher.price;
+    const voucherDiscount = groupPurchase.voucher.discount;
+    const groupDiscount = groupPurchase.voucher.groupDiscount; // Assuming group discount is stored on the groupPurchase
+
+    const finalPricePerUser = voucherPrice * (1 - voucherDiscount / 100) * (1 - groupDiscount / 100);
+    const conversionRate = 10;
+    const finalPriceInGems = Math.round(finalPricePerUser * conversionRate);
+
+    let allPaymentsSuccessful = true;
+    const failedParticipants: number[] = [];
+    //console.log("looping through participants");
+    // Iterate over each participant and charge gems
     for (const participant of groupPurchase.participants) {
-      // TODO RE - calculate the amount. need to split among the number of participants.
-      const amount = groupPurchase.voucher.discountedPrice * 100; // Stripe uses smallest currency unit (in cents thus, *by 100)
+      console.log(`Processing participant ${participant.customer.id}`);
       const customer = await Customer_account.findOne({
         where: { id: participant.customer.id },
       });
 
       if (!customer) continue;
 
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount,
-        currency: currency, // Set the currency
-        metadata: {
-          customerId: customer.id,
-          groupPurchaseId: groupPurchase.id,
+      try {
+        // Check if the customer has enough gems
+        if (customer.gem_balance < finalPriceInGems) {
+          console.error(`Insufficient gems for participant ${participant.customer.id}`);
+          failedParticipants.push(participant.customer.id);
+          allPaymentsSuccessful = false;
+          continue; // Skip to the next participant
         }
-      });
 
-      // Store the clientSecret for each participant
-      paymentIntents.push({
-        customer_id: customer.id,
-        clientSecret: paymentIntent.client_secret,
+        // Deduct the required gems from the customer's gem balance
+        customer.gem_balance -= finalPriceInGems;
+        await customer.save();
+
+        // Update participant's payment status and record the payment completion time
+        participant.payment_status = 'paid';
+        participant.payment_completed_at = new Date();
+        await participant.save();
+
+      } catch (error) {
+        console.error(`Payment failed for participant ${participant.customer.id}:`, error);
+        // Mark this participant's payment as failed
+        participant.payment_status = 'failed';
+        await participant.save();
+        allPaymentsSuccessful = false;
+      }
+    }
+
+    // If any payments failed, return an error and do not mark the group purchase as completed
+    if (!allPaymentsSuccessful) {
+      return res.status(500).json({
+        message: `One or more payments failed. Group purchase could not be completed. Failed participants: ${failedParticipants.join(", ")}`,
       });
     }
 
-    // Return all payment intents (one for each participant)
-    return res.status(200).json({ paymentIntents });
+    // Mark the group purchase as completed if all payments were successful
+    groupPurchase.status = 'completed';
+    await groupPurchase.save();
+
+    // Return success response
+    return res.status(200).json({ message: "Group purchase completed successfully, and all users have been charged in gems." });
   } catch (error) {
-    console.error("Error finalizing group purchase:", error);
+    console.error("Error finalizing group purchase:", error.message);
     return res.status(500).json({ message: "Error finalizing group purchase" });
   }
 };
+
 
 
 const getUserFromDB = async (userId: number, userRole: UserRole): Promise<Business_account | Customer_account> => {

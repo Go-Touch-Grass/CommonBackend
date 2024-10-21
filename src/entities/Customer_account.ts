@@ -149,9 +149,10 @@ export class Customer_account extends AbstractStripeUser {
 
 
 	@OneToMany(() => Customer_group_purchase, groupPurchase => groupPurchase.creator)
-	groupPurchases: Customer_group_purchase[];
+	ownedGroupPurchases: Customer_group_purchase[];
+
 
 	@OneToMany(() => Customer_group_participant, participant => participant.customer)
-	groupParticipants: Customer_group_participant[];
+	participants: Customer_group_participant[];
 
 }

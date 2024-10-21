@@ -16,8 +16,14 @@ export class Customer_group_participant extends BaseEntity {
     @JoinColumn({ name: "group_purchase_id" })
     groupPurchase: Customer_group_purchase;
 
-    @ManyToOne(() => Customer_account, customer => customer.groupParticipants)
+    @ManyToOne(() => Customer_account, customer => customer.participants)
     @JoinColumn({ name: "customer_id" })
     customer: Customer_account;
+
+    @Column({ type: 'enum', enum: ['pending', 'paid', 'failed'], default: 'pending' })
+    payment_status: 'pending' | 'paid' | 'failed';
+
+    @Column({ type: 'timestamp', nullable: true })
+    payment_completed_at: Date | null;
 
 }

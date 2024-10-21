@@ -63,14 +63,71 @@ export const startGroupPurchase = async (req: Request, res: Response) => {
     }
 };
 
+{/*
 export const joinGroupPurchase = async (req: Request, res: Response) => {
     const { group_purchase_id } = req.body;
     const customer_id = (req as any).user.id;
+
     try {
         const groupPurchase = await Customer_group_purchase.findOne({
             where: { id: group_purchase_id },
-            relations: ["participants"]
+            relations: ["participants"],
         });
+
+        const customer = await Customer_account.findOne({
+            where: { id: customer_id },
+        });
+
+        if (!groupPurchase || !customer) {
+            return res.status(404).json({ message: "Group purchase or customer not found" });
+        }
+
+        // Check if the group is full or expired
+        if (groupPurchase.current_size >= groupPurchase.group_size) {
+            return res.status(400).json({ message: "Group purchase is already complete" });
+        }
+
+        if (new Date() > groupPurchase.expires_at) {
+            return res.status(400).json({ message: "Group purchase has expired" });
+        }
+
+        // Add the new participant
+        const participant = Customer_group_participant.create({
+            groupPurchase,  // Ensure this field is properly set
+            customer,
+            joined_at: new Date(),
+        });
+
+        await participant.save();
+
+        // Update the group size
+        groupPurchase.current_size += 1;
+
+        // If the group is complete, update the status
+        if (groupPurchase.current_size === groupPurchase.group_size) {
+            groupPurchase.status = "complete";
+        }
+
+        await groupPurchase.save();
+
+        return res.status(200).json(groupPurchase);
+    } catch (error) {
+        return res.status(500).json({ message: "Error joining group purchase", error: error.message });
+    }
+};
+*/}
+
+export const joinGroupPurchase = async (req: Request, res: Response) => {
+    const { group_purchase_id } = req.body;
+    console.log("group_purchase_id", group_purchase_id);
+    const customer_id = (req as any).user.id;
+
+    try {
+        const groupPurchase = await Customer_group_purchase.findOne({
+            where: { id: group_purchase_id },
+            relations: ["participants", "participants.customer"],
+        });
+        //console.log("groupPurchase in join:", groupPurchase);
 
         const customer = await Customer_account.findOne({
             where: { id: customer_id },
@@ -88,24 +145,60 @@ export const joinGroupPurchase = async (req: Request, res: Response) => {
             return res.status(400).json({ message: "Group purchase has expired" });
         }
 
+        // Check if the customer has already joined this group purchase
+        const existingParticipant = groupPurchase.participants.find(participant => participant.customer.id === customer.id);
+        if (existingParticipant) {
+            return res.status(400).json({ message: "Customer has already joined this group purchase." });
+        }
+
+        {/* 
+        // Create and save the new participant with correct associations
+        const participant = new Customer_group_participant();
+        participant.groupPurchase = groupPurchase;
+        participant.customer = customer;
+        participant.joined_at = new Date();
+        participant.payment_status = "pending";
+        console.log("Participant before saving:", participant.id);
+        await participant.save();
+        */}
+
         // Add the new participant
         const participant = Customer_group_participant.create({
-            groupPurchase,
-            customer,
+            //groupPurchase: { id: group_purchase_id },
+            groupPurchase: groupPurchase,
+            customer: customer,
             joined_at: new Date(),
+            payment_status: "pending",
+
         });
         await participant.save();
 
-        // Update the group size
-        groupPurchase.current_size += 1;
+
+        groupPurchase.current_size += 1;  // Updat group size
+
         if (groupPurchase.current_size === groupPurchase.group_size) {
-            groupPurchase.status = "complete";
+            groupPurchase.status = "completed"; //group full
         }
+        groupPurchase.participants.push(participant); // Add the new participant to the group purchase
         await groupPurchase.save();
 
-        return res.status(200).json(groupPurchase);
+        // Reload the groupPurchase entity to include the newly added participant
+        const updatedGroupPurchase = await Customer_group_purchase.findOne({
+            where: { id: group_purchase_id },
+            relations: ["participants", "participants.customer"],
+        });
+        if (updatedGroupPurchase) {
+            console.log("Participants in the updated group purchase:", updatedGroupPurchase.participants);
+        } else {
+            console.log("Failed to reload the updated group purchase.");
+        }
+
+        console.log("updatedGroupPurchase in join", updatedGroupPurchase);
+        //console.log("returning group purchase", groupPurchase);
+        return res.status(200).json(updatedGroupPurchase);
     } catch (error) {
-        return res.status(500).json({ message: "Error joining group purchase", error });
+        console.error("Error in joinGroupPurchase:", error.message);
+        return res.status(500).json({ message: "Error joining group purchase", error: error.message });
     }
 };
 
