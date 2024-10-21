@@ -22,6 +22,55 @@ import { Voucher_transaction } from '../entities/Voucher_transaction';
 import { Customer_account } from '../entities/Customer_account';
 import { Customer_inventory } from '../entities/Customer_inventory';
 
+
+export const handleMarkUsed = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { transactionId } = req.body; // Assuming the transaction ID is sent in the request body
+    const transactionIdNum = parseInt(transactionId, 10);
+
+    if (isNaN(transactionIdNum)) {
+      res.status(400).json({ message: 'Invalid transaction ID' });
+      return;
+    }
+
+    // Find the transaction by ID
+    const transaction = await Voucher_transaction.findOne({
+      where: { id: transactionIdNum },
+      relations: ['voucher'], // Load the associated voucher if needed
+    });
+
+    if (!transaction || !transaction.voucher) {
+      res.status(404).json({ message: 'Voucher transaction or associated voucher not found' });
+      return;
+    }
+
+    // Check if the transaction is already marked as used
+    if (transaction.used === true) { // Assuming 'used' is a boolean property
+      res.status(400).json({ message: 'Voucher transaction already marked as used' });
+      return;
+    }
+
+    // Mark the transaction as used
+    transaction.used = true; // Set the used status to true
+
+    // Save the updated transaction
+    await transaction.save();
+
+    res.status(200).json({
+      message: 'Voucher transaction marked as used successfully',
+      transaction: {
+        id: transaction.id,
+        used: transaction.used, // Return the updated used status
+        customerId: transaction.customerId,
+        voucherId: transaction.voucherId,
+      },
+    });
+  } catch (error) {
+    console.error('Error marking voucher transaction as used:', error.message);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const { transactionId, redeemed } = req.body; // Assuming redeemed is a string ('yes', 'no', 'pending')
@@ -104,11 +153,6 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
   }
 };
 
-
-
-
-
-
 export const getVoucherTransactions = async (req: Request, res: Response): Promise<void> => {
   try {
     const { listing_id } = req.params;
@@ -151,6 +195,7 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
       purchaseDate: transaction.purchaseDate,
       expirationDate: transaction.voucher.expirationDate.toISOString(),
       amountSpent: transaction.voucher.discountedPrice,
+      gemSpent: transaction.gems_spent,
       redeemed: transaction.redeemed,
       used: transaction.used,
     }));
