@@ -15,8 +15,8 @@ import { Business_voucher } from "./Business_voucher";
 import { Customer_group_participant } from "./Customer_group_participant";
 
 export enum statusEnum {
-    PENDING = 'pending',
-    COMPLETED = 'completed',
+    PENDING = 'pending', // group not full
+    COMPLETED = 'completed', // group full
     EXPIRED = 'expired'
 }
 
