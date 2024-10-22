@@ -17,6 +17,7 @@ type PaymentIntentInfo = {
 export const finalizeGroupPurchase = async (req: Request, res: Response) => {
   const { group_purchase_id } = req.body;
   //console.log('Received group_purchase_id:', group_purchase_id);
+  const quantity = 1;
 
   if (!group_purchase_id) {
     return res.status(400).json({ message: "Group purchase ID is missing." });
@@ -28,7 +29,7 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
       relations: ["participants", "participants.customer", "voucher"],
     });
 
-    if (!groupPurchase || groupPurchase.status !== "completed") {
+    if (!groupPurchase || groupPurchase.groupStatus !== "completed") {
       return res.status(400).json({ message: "Group purchase is not complete or does not exist." });
     }
 
@@ -95,38 +96,53 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
         await participant.save();
 
 
-        ///////////// This part need change, 
-        /*
-               // Add Voucher to Inventory:
-               // Fetch or create the customer's inventory
-               let inventory = await Customer_inventory.findOne({
-                 where: { customer_account: { id: participant.customer.id } },
-                 relations: ['voucherInstances'],
-               });
-       
-               if (!inventory) {
-                 inventory = new Customer_inventory();
-                 inventory.customer_account = customer;
-                 await inventory.save();
-               }
-       
-               // Check if the customer already owns this voucher
-               let customerVoucher = await Customer_voucher.findOne({
-                 where: { inventory: { id: inventory.id }, voucher: { listing_id: groupPurchase.voucher.listing_id } },
-               });
-       
-               if (customerVoucher) {
-                 // If they already own the voucher, update the quantity
-                 //customerVoucher.quantity += quantity;
-               } else {
-                 // Otherwise, create a new Customer_voucher entry
-                 customerVoucher = new Customer_voucher();
-                 customerVoucher.inventory = inventory;
-                 customerVoucher.voucher = groupPurchase.voucher;
-                 customerVoucher.quantity = 1;
-               }
-               await customerVoucher.save();
-       */
+
+        /////////////  Add Voucher to Inventory:
+        // Fetch or create the customer's inventory
+        let inventory = await Customer_inventory.findOne({
+          where: { customer_account: { id: customer.id } },
+          relations: ['voucherInstances'],
+        });
+
+        if (!inventory) {
+          inventory = new Customer_inventory();
+          inventory.customer_account = customer;
+          await inventory.save();
+        }
+
+        // Check if the customer already owns this voucher
+        let customerVoucher = await Customer_voucher.findOne({
+          where: { inventory: { id: inventory.id }, voucher: { listing_id: groupPurchase.voucher.listing_id } },
+        });
+
+        if (customerVoucher) {
+          // If they already own the voucher, update the quantity
+          customerVoucher.quantity += quantity;
+        } else {
+          // Otherwise, create a new Customer_voucher entry
+          customerVoucher = new Customer_voucher();
+          customerVoucher.inventory = inventory;
+          customerVoucher.voucher = groupPurchase.voucher;
+          customerVoucher.quantity = quantity;
+        }
+        await customerVoucher.save();
+
+        // Add reward item to customer's inventory if applicable
+        if (groupPurchase.voucher.rewardItem) {
+          const customerWithItems = await Customer_account.findOne({
+            where: { id: customer.id },
+            relations: ['ownedItems']
+          });
+
+          if (customerWithItems) {
+            const alreadyOwnsItem = customerWithItems.ownedItems.some(item => item.id === groupPurchase.voucher.rewardItem!.id);
+            if (!alreadyOwnsItem) {
+              customerWithItems.ownedItems.push(groupPurchase.voucher.rewardItem);
+              await customerWithItems.save();
+            }
+          }
+        }
+
         //////////////////
 
 
@@ -147,6 +163,7 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
     }
 
     // Return success response
+    groupPurchase.paymentStatus = 'completed';
     return res.status(200).json({ message: "Group purchase completed successfully, and all users have been charged in gems." });
   } catch (error) {
     console.error("Error finalizing group purchase:", error.message);

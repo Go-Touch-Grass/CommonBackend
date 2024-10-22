@@ -19,5 +19,5 @@ export class Customer_voucher extends BaseEntity {
     quantity: number;
 
     @Column({ default: true })
-    status: boolean;
+    status: boolean; // redemption status
 }

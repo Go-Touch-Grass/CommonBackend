@@ -42,7 +42,7 @@ export const startGroupPurchase = async (req: Request, res: Response) => {
             creator,
             group_size,
             current_size: 1, // Creator counts as the first member
-            status: "pending",
+            groupStatus: "pending",
             expires_at,
         });
 
@@ -166,7 +166,7 @@ export const joinGroupPurchase = async (req: Request, res: Response) => {
         groupPurchase.current_size += 1;  // Updat group size
 
         if (groupPurchase.current_size === groupPurchase.group_size) {
-            groupPurchase.status = "completed"; //group full
+            groupPurchase.groupStatus = "completed"; //group full
         }
         groupPurchase.participants.push(participant); // Add the new participant to the group purchase
         await groupPurchase.save();
@@ -225,12 +225,12 @@ export const cancelGroupPurchaseStatus = async (req: Request, res: Response) => 
         }
 
         // Ensure only the creator can cancel it and it's still pending
-        if (groupPurchase.creator.id !== creator_id || groupPurchase.status !== "pending") {
+        if (groupPurchase.creator.id !== creator_id || groupPurchase.groupStatus !== "pending") {
             return res.status(403).json({ message: "You can only cancel a pending group purchase as the creator." });
         }
 
         // Mark the group purchase as canceled
-        groupPurchase.status = "canceled";
+        groupPurchase.groupStatus = "canceled";
         await groupPurchase.save();
 
         return res.status(200).json({ message: "Group purchase canceled successfully." });

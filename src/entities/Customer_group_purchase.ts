@@ -13,6 +13,7 @@ import { Customer_account } from "./Customer_account";
 import { Business_voucher } from "./Business_voucher";
 
 import { Customer_group_participant } from "./Customer_group_participant";
+import { Customer_voucher } from "./Customer_vouchers";
 
 export enum statusEnum {
     PENDING = 'pending', /// group not full
@@ -20,10 +21,16 @@ export enum statusEnum {
     EXPIRED = 'expired'
 }
 
+export enum paymentStatusEnum {
+    PENDING = 'pending', /// not paid
+    COMPLETED = 'completed', // All paid
+
+}
+
 // Store information about each group purchase
 
 @Entity("customer_group_purchase")
-export class Customer_group_purchase extends BaseEntity {
+export class Customer_group_purchase extends Customer_voucher {
     @PrimaryGeneratedColumn()
     id: number;
 
@@ -38,7 +45,14 @@ export class Customer_group_purchase extends BaseEntity {
         enum: statusEnum,
         default: statusEnum.PENDING
     })
-    status: string;
+    groupStatus: string;
+
+    @Column({
+        type: 'enum',
+        enum: paymentStatusEnum,
+        default: paymentStatusEnum.PENDING
+    })
+    paymentStatus: string;
 
     @Column({ type: "timestamp" })
     expires_at: Date; // When the group offer expires
