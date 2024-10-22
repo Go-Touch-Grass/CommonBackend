@@ -16,35 +16,41 @@ import { Between, getRepository, LessThanOrEqual } from "typeorm";
 import { Business_voucher } from "../entities/Business_voucher";
 import { IsNull } from "typeorm";
 import { stripe } from "../index";
-import cron from 'node-cron';
-import { Item } from '../entities/Item';
-import { Voucher_transaction } from '../entities/Voucher_transaction';
-import { Customer_account } from '../entities/Customer_account';
-import { Customer_inventory } from '../entities/Customer_inventory';
+import cron from "node-cron";
+import { Item } from "../entities/Item";
+import { Voucher_transaction } from "../entities/Voucher_transaction";
+import { Customer_account } from "../entities/Customer_account";
+import { Customer_inventory } from "../entities/Customer_inventory";
 
-
-export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
+export const updateVoucherTransactionStatus = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { transactionId, redeemed } = req.body;
     const transactionIdNum = parseInt(transactionId, 10);
 
     if (isNaN(transactionIdNum)) {
-      res.status(400).json({ message: 'Invalid transaction ID' });
+      res.status(400).json({ message: "Invalid transaction ID" });
       return;
     }
 
     const transaction = await Voucher_transaction.findOne({
       where: { id: transactionIdNum },
-      relations: ['voucher'], // Load the associated voucher
+      relations: ["voucher"], // Load the associated voucher
     });
 
     if (!transaction || !transaction.voucher) {
-      res.status(404).json({ message: 'Voucher transaction or associated voucher not found' });
+      res
+        .status(404)
+        .json({
+          message: "Voucher transaction or associated voucher not found",
+        });
       return;
     }
 
     if (transaction.used) {
-      res.status(400).json({ message: 'Voucher transaction already redeemed' });
+      res.status(400).json({ message: "Voucher transaction already redeemed" });
       return;
     }
 
@@ -54,12 +60,14 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
     // If the voucher is being redeemed, find the corresponding customer inventory
     const customerInventory = await Customer_inventory.findOne({
       where: { customer_account: { id: transaction.customerId } }, // Use an object to reference the customer account
-      relations: ['vouchers'], // Load associated vouchers
+      relations: ["vouchers"], // Load associated vouchers
     });
 
     if (customerInventory) {
       // Check if the customer inventory has the voucher in its collection
-      const hasVoucher = customerInventory.vouchers.some(v => v.listing_id === transaction.voucher.listing_id);
+      const hasVoucher = customerInventory.vouchers.some(
+        (v) => v.listing_id === transaction.voucher.listing_id
+      );
 
       if (hasVoucher) {
         customerInventory.used = true; // Mark inventory as used
@@ -70,7 +78,7 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
     await transaction.save(); // Save the updated transaction
 
     res.status(200).json({
-      message: 'Voucher transaction redeemed successfully',
+      message: "Voucher transaction redeemed successfully",
       transaction: {
         id: transaction.id,
         used: transaction.used,
@@ -79,15 +87,15 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
       },
     });
   } catch (error) {
-    console.error('Error updating voucher transaction status:', error.message);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error updating voucher transaction status:", error.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-
-
-
-export const getVoucherTransactions = async (req: Request, res: Response): Promise<void> => {
+export const getVoucherTransactions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { listing_id } = req.params;
     const { used } = req.query; // Get the 'used' query parameter
@@ -95,7 +103,7 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
     // Convert listing_id to a number
     const voucherIdNum = parseInt(listing_id, 10);
     if (isNaN(voucherIdNum)) {
-      res.status(400).json({ message: 'Invalid listing_id' });
+      res.status(400).json({ message: "Invalid listing_id" });
       return;
     }
 
@@ -103,14 +111,23 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
     const transactions = await Voucher_transaction.find({
       where: {
         voucherId: voucherIdNum,
-        ...(used === 'true' ? { used: true } : used === 'false' ? { used: false } : {}),
+        ...(used === "true"
+          ? { used: true }
+          : used === "false"
+          ? { used: false }
+          : {}),
       },
-      relations: ['voucher'],
+      relations: ["voucher"],
     });
 
     // If there are no transactions, return an empty array
     if (transactions.length === 0) {
-      res.status(200).json({ transactions: [], message: 'No transactions found for this voucher.' });
+      res
+        .status(200)
+        .json({
+          transactions: [],
+          message: "No transactions found for this voucher.",
+        });
       return;
     }
 
@@ -120,12 +137,12 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
       return acc;
     }, {});
 
-    const response = transactions.map(transaction => ({
+    const response = transactions.map((transaction) => ({
       id: transaction.id,
       voucherId: transaction.voucher.listing_id,
       voucherName: transaction.voucher.name,
       customerId: transaction.customerId,
-      customerName: customerMap[transaction.customerId] || 'Unknown',
+      customerName: customerMap[transaction.customerId] || "Unknown",
       purchaseDate: transaction.purchaseDate,
       expirationDate: transaction.voucher.expirationDate.toISOString(),
       amountSpent: transaction.gems_spent,
@@ -135,11 +152,10 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
 
     res.status(200).json({ transactions: response });
   } catch (error) {
-    console.error('Error fetching transactions:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error fetching transactions:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 export const updateOutletSubscription = async (
   req: Request,
@@ -169,14 +185,16 @@ export const updateOutletSubscription = async (
     outlet.hasSubscriptionPlan = hasSubscriptionPlan;
     await outlet.save();
 
-    res.status(200).json({ message: 'Outlet subscription status updated successfully' });
+    res
+      .status(200)
+      .json({ message: "Outlet subscription status updated successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error updating outlet subscription status' });
+    res
+      .status(500)
+      .json({ message: "Error updating outlet subscription status" });
   }
 };
-
-
 
 export const updateHasSubscription = async (
   req: Request,
@@ -201,13 +219,14 @@ export const updateHasSubscription = async (
 
     business.hasSubscriptionPlan = hasSubscriptionPlan;
     await business.save();
-    res.status(200).json({ message: 'Subscription status updated successfully' });
+    res
+      .status(200)
+      .json({ message: "Subscription status updated successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error updating subscription status' });
+    res.status(500).json({ message: "Error updating subscription status" });
   }
-}
-
+};
 
 export const editSubscription = async (
   req: Request,
@@ -343,7 +362,7 @@ export const createSubscription = async (
 
     const total_gem = parseInt(
       pricing.base[duration].gems +
-      (pricing.extra[distance_coverage]?.gems || 0) * duration
+        (pricing.extra[distance_coverage]?.gems || 0) * duration
     );
 
     const businessAccount = await Business_account.findOne({
@@ -628,10 +647,10 @@ export const checkExpiringSubscription = async (): Promise<void> => {
   } catch (error) {
     console.error("Error checking expiring subscriptions:", error);
   }
-}
+};
 
-cron.schedule('*/20 * * * * *', async () => {
-  console.log('Running automatic subscription renewal job...');
+cron.schedule("*/20 * * * * *", async () => {
+  console.log("Running automatic subscription renewal job...");
 
   try {
     const expiringSubscriptions = await BusinessAccountSubscription.find({
@@ -639,19 +658,29 @@ cron.schedule('*/20 * * * * *', async () => {
         expiration_date: LessThanOrEqual(new Date()), // Check for expired subscriptions
         autoRenew: true, // Only fetch subscriptions marked for auto-renewal
       },
-      relations: ['business_register_business', 'business_register_business.business_account'], // Ensure the necessary relations are fetched
+      relations: [
+        "business_register_business",
+        "business_register_business.business_account",
+      ], // Ensure the necessary relations are fetched
     });
 
-    console.log(`Found ${expiringSubscriptions.length} expiring subscriptions for auto-renewal`);
+    console.log(
+      `Found ${expiringSubscriptions.length} expiring subscriptions for auto-renewal`
+    );
     for (const subscription of expiringSubscriptions) {
-
       // Ensure that business_register_business and business_account exist
-      if (!subscription.business_register_business || !subscription.business_register_business.business_account) {
-        console.log(`Missing business_register_business or business_account for subscription: ${subscription.subscription_id}`);
+      if (
+        !subscription.business_register_business ||
+        !subscription.business_register_business.business_account
+      ) {
+        console.log(
+          `Missing business_register_business or business_account for subscription: ${subscription.subscription_id}`
+        );
         continue; // Skip this subscription
       }
 
-      const businessAccount = subscription.business_register_business.business_account;
+      const businessAccount =
+        subscription.business_register_business.business_account;
 
       // Pricing structure
       const pricing = {
@@ -668,8 +697,10 @@ cron.schedule('*/20 * * * * *', async () => {
       };
 
       // Calculate total gems needed for renewal
-      const total_gem = pricing.base[subscription.duration].gems +
-        (pricing.extra[subscription.distance_coverage]?.gems || 0) * subscription.duration;
+      const total_gem =
+        pricing.base[subscription.duration].gems +
+        (pricing.extra[subscription.distance_coverage]?.gems || 0) *
+          subscription.duration;
 
       // Check if the business account has enough gems for renewal
       if (businessAccount.gem_balance >= total_gem) {
@@ -684,30 +715,40 @@ cron.schedule('*/20 * * * * *', async () => {
 
         // Extend expiration date
         const newExpirationDate = new Date(subscription.expiration_date);
-        newExpirationDate.setMonth(newExpirationDate.getMonth() + subscription.duration);
+        newExpirationDate.setMonth(
+          newExpirationDate.getMonth() + subscription.duration
+        );
         subscription.expiration_date = newExpirationDate;
 
         await subscription.save();
-        console.log(`Subscription ${subscription.subscription_id} renewed successfully`);
+        console.log(
+          `Subscription ${subscription.subscription_id} renewed successfully`
+        );
       } else {
-        console.log(`Not enough gems to renew subscription ${subscription.subscription_id}. Sending notification...`);
-
+        console.log(
+          `Not enough gems to renew subscription ${subscription.subscription_id}. Sending notification...`
+        );
       }
     }
   } catch (error) {
-    console.error('Error during automatic subscription renewal:', error);
+    console.error("Error during automatic subscription renewal:", error);
   }
 });
 
-
-
-
-
-export const updateSubscription = async (req: Request, res: Response): Promise<void> => {
+export const updateSubscription = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { username, subscription_id, duration, distance_coverage, autoRenew } = req.body;
+    const {
+      username,
+      subscription_id,
+      duration,
+      distance_coverage,
+      autoRenew,
+    } = req.body;
 
-    console.log('Request body:', req.body);
+    console.log("Request body:", req.body);
 
     // Find the subscription by subscription_id
     const existingSubscription = await BusinessAccountSubscription.findOne({
@@ -715,53 +756,67 @@ export const updateSubscription = async (req: Request, res: Response): Promise<v
     });
 
     if (!existingSubscription) {
-      console.log(`No subscription found with subscription_id: ${subscription_id}`);
-      res.status(404).json({ status: 404, message: 'No subscription found to update' });
+      console.log(
+        `No subscription found with subscription_id: ${subscription_id}`
+      );
+      res
+        .status(404)
+        .json({ status: 404, message: "No subscription found to update" });
       return;
     }
 
-    console.log('Found existing subscription:', existingSubscription);
+    console.log("Found existing subscription:", existingSubscription);
 
     // Check if the request includes a username, and if it matches the subscription owner
-    const associatedBusiness = await Business_account.findOne({ where: { username } });
+    const associatedBusiness = await Business_account.findOne({
+      where: { username },
+    });
     if (!associatedBusiness) {
       console.log(`Unauthorized attempt by user ${username}`);
-      res.status(401).json({ status: 401, message: 'Unauthorized' });
+      res.status(401).json({ status: 401, message: "Unauthorized" });
       return;
     }
 
     // Update subscription fields
     if (duration) existingSubscription.duration = duration;
-    if (distance_coverage) existingSubscription.distance_coverage = distance_coverage;
+    if (distance_coverage)
+      existingSubscription.distance_coverage = distance_coverage;
     if (autoRenew !== undefined) existingSubscription.autoRenew = autoRenew;
-    associatedBusiness.min_gem_balance += Math.floor(existingSubscription.total_gem);
-    await associatedBusiness.save()
+    associatedBusiness.min_gem_balance += Math.floor(
+      existingSubscription.total_gem
+    );
+    await associatedBusiness.save();
 
     // Save the updated subscription
     await existingSubscription.save();
 
-    console.log('Subscription successfully updated:', existingSubscription);
+    console.log("Subscription successfully updated:", existingSubscription);
 
     res.status(200).json({
       status: 200,
-      message: 'Subscription successfully updated',
+      message: "Subscription successfully updated",
       subscription: existingSubscription,
     });
   } catch (error) {
-    console.error('Error updating subscription:', error);
-    res.status(500).json({ status: 500, message: 'Internal Server Error', error: error.message });
+    console.error("Error updating subscription:", error);
+    res
+      .status(500)
+      .json({
+        status: 500,
+        message: "Internal Server Error",
+        error: error.message,
+      });
   }
 };
 
-
-
-
-
-export const renewSubscription = async (req: Request, res: Response): Promise<void> => {
+export const renewSubscription = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { username, outlet_id, duration, distance_coverage } = req.body;
 
-    console.log('Request body:', req.body);
+    console.log("Request body:", req.body);
 
     const pricing = {
       base: {
@@ -776,11 +831,14 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
       },
     };
 
-    const total_gem = parseInt(pricing.base[duration].gems + (pricing.extra[distance_coverage]?.gems || 0) * duration);
+    const total_gem = parseInt(
+      pricing.base[duration].gems +
+        (pricing.extra[distance_coverage]?.gems || 0) * duration
+    );
 
     const businessAccount = await Business_account.findOne({
       where: { username },
-      relations: ['business']
+      relations: ["business"],
     });
 
     if (!businessAccount) {
@@ -791,10 +849,15 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    console.log('Found business account:', businessAccount);
+    console.log("Found business account:", businessAccount);
 
     if (businessAccount.gem_balance < total_gem) {
-      res.status(400).json({ status: 400, message: 'Not enough gems to renew subscription' });
+      res
+        .status(400)
+        .json({
+          status: 400,
+          message: "Not enough gems to renew subscription",
+        });
       return;
     }
 
@@ -803,9 +866,9 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
       where: {
         business_register_business: businessAccount.business,
         outlet: outlet_id || null, // Match outlet_id or main subscription (null)
-        status: 'active' // Only renew active subscriptions
+        status: "active", // Only renew active subscriptions
       },
-      relations: ['business_register_business']
+      relations: ["business_register_business"],
     });
 
     if (!existingSubscription) {
@@ -819,7 +882,7 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    console.log('Found existing subscription:', existingSubscription);
+    console.log("Found existing subscription:", existingSubscription);
 
     const currentDate = new Date();
     let newExpirationDate = new Date(existingSubscription.expiration_date);
@@ -832,7 +895,7 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     // Extend by the subscription duration
     newExpirationDate.setMonth(newExpirationDate.getMonth() + duration);
 
-    console.log('New expiration date calculated:', newExpirationDate);
+    console.log("New expiration date calculated:", newExpirationDate);
 
     // Deduct the total gem cost from the gem balance
     businessAccount.gem_balance -= total_gem;
@@ -845,11 +908,11 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     existingSubscription.distance_coverage = distance_coverage;
     existingSubscription.total_gem = total_gem;
 
-    console.log('Saving updated subscription:', existingSubscription); // Log updated subscription before saving
+    console.log("Saving updated subscription:", existingSubscription); // Log updated subscription before saving
     await existingSubscription.save();
-    console.log('Subscription successfully renewed:', existingSubscription);
+    console.log("Subscription successfully renewed:", existingSubscription);
     const savedSubscription = await existingSubscription.save();
-    console.log('Subscription saved in DB:', savedSubscription); // Check if the updated object is being persisted
+    console.log("Subscription saved in DB:", savedSubscription); // Check if the updated object is being persisted
 
     res.status(200).json({
       status: 200,
@@ -865,9 +928,6 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     });
   }
 };
-
-
-
 
 export const viewSubscription = async (
   req: Request,
@@ -984,7 +1044,7 @@ export const createAccount = async (
 
     res.status(500).json({
       status: 500,
-      message: "Internal Server Error",
+      message: "Failed to create account",
     });
   }
 };
@@ -1186,7 +1246,9 @@ export const retrieveProfile = async (
     }
 
     // Filter out deleted outlets
-    const activeOutlets = businessAccount.outlets.filter(outlet => !outlet.isDeleted);
+    const activeOutlets = businessAccount.outlets.filter(
+      (outlet) => !outlet.isDeleted
+    );
 
     res.json({
       status: 200,
@@ -1200,7 +1262,7 @@ export const retrieveProfile = async (
         min_gem_balance: businessAccount.min_gem_balance,
         banStatus: businessAccount.banStatus,
         banRemarks: businessAccount.banRemarks,
-        transactions: businessAccount.transactions
+        transactions: businessAccount.transactions,
       },
       outlets: activeOutlets,
       registeredBusiness: businessAccount.business,
@@ -1332,11 +1394,7 @@ export const registerBusiness = async (
 ): Promise<void> => {
   try {
     const username = (req as any).user.username;
-    const {
-      entityName,
-      location,
-      category,
-    } = req.body;
+    const { entityName, location, category } = req.body;
     console.log("Request body: ", req.body);
     console.log("Request file: ", req.file);
 
@@ -1395,7 +1453,10 @@ export const registerBusiness = async (
   }
 };
 
-export const editRegisterBusiness = async (req: Request, res: Response): Promise<void> => {
+export const editRegisterBusiness = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const username = (req as any).user.username;
     const updatedData = req.body; // Grab the updated data from the request body
@@ -1403,7 +1464,7 @@ export const editRegisterBusiness = async (req: Request, res: Response): Promise
     // Find the business account using the username
     const businessAccount = await Business_account.findOneBy({ username });
     if (!businessAccount) {
-      res.status(404).json({ message: 'Business account not found' });
+      res.status(404).json({ message: "Business account not found" });
       return;
     }
 
@@ -1413,7 +1474,7 @@ export const editRegisterBusiness = async (req: Request, res: Response): Promise
     });
 
     if (!registeredBusiness) {
-      res.status(404).json({ message: 'Registered business not found' });
+      res.status(404).json({ message: "Registered business not found" });
       return;
     }
 
@@ -1432,23 +1493,25 @@ export const editRegisterBusiness = async (req: Request, res: Response): Promise
     await registeredBusiness.save();
 
     res.status(200).json({
-      message: 'Business registration updated successfully',
+      message: "Business registration updated successfully",
       registeredBusiness,
     });
   } catch (error) {
-    console.error('Error updating business registration:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error updating business registration:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-export const retrieveRegisterBusiness = async (req: Request, res: Response): Promise<void> => {
-
+export const retrieveRegisterBusiness = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { registration_id } = req.params;
 
     const businessRegistrationIdNum = parseInt(registration_id, 10);
     if (isNaN(businessRegistrationIdNum)) {
-      res.status(400).json({ message: 'Invalid business_registration_id' });
+      res.status(400).json({ message: "Invalid business_registration_id" });
       return;
     }
 
@@ -1458,18 +1521,17 @@ export const retrieveRegisterBusiness = async (req: Request, res: Response): Pro
     });
 
     if (!registeredBusiness) {
-      res.status(404).json({ message: 'Registered business not found' });
+      res.status(404).json({ message: "Registered business not found" });
       return;
     }
 
     // Send the registered business data as a response
     res.status(200).json(registeredBusiness);
   } catch (error) {
-    console.error('Error retrieving registered business:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error retrieving registered business:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 export const createOutlet = async (
   req: Request,
@@ -1491,7 +1553,9 @@ export const createOutlet = async (
     }
 
     if (!business) {
-      res.status(404).json({ status: 404, message: 'Business account not found' });
+      res
+        .status(404)
+        .json({ status: 404, message: "Business account not found" });
       return;
     }
     const newOutlet = Outlet.create({
@@ -1511,31 +1575,34 @@ export const createOutlet = async (
   }
 };
 
-export const retrieveOutlet = async (req: Request, res: Response): Promise<void> => {
+export const retrieveOutlet = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { outlet_id } = req.params;
 
     const outletIdNum = parseInt(outlet_id, 10);
     if (isNaN(outletIdNum)) {
-      res.status(400).json({ message: 'Invalid outlet_id' });
+      res.status(400).json({ message: "Invalid outlet_id" });
       return;
     }
 
-    const outlet = await Outlet.findOne({ 
-      where: { 
+    const outlet = await Outlet.findOne({
+      where: {
         outlet_id: outletIdNum,
-        isDeleted: false // Only retrieve non-deleted outlets
-      } 
+        isDeleted: false, // Only retrieve non-deleted outlets
+      },
     });
     if (!outlet) {
-      res.status(404).json({ message: 'Outlet not found' });
+      res.status(404).json({ message: "Outlet not found" });
       return;
     }
 
     res.status(200).json(outlet);
   } catch (error) {
-    console.error('Error retrieving outlet:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error retrieving outlet:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 /*
@@ -1570,25 +1637,28 @@ export const retrieveOutletsByRegistrationId = async (req: Request, res: Respons
     }
 };
 */
-export const editOutlet = async (req: Request, res: Response): Promise<void> => {
+export const editOutlet = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { outlet_id } = req.params;
     const updatedData = req.body;
-    console.log('EditOutlet - Updated data:', updatedData);
+    console.log("EditOutlet - Updated data:", updatedData);
     const outletIdNum = parseInt(outlet_id, 10);
     if (isNaN(outletIdNum)) {
-      res.status(400).json({ message: 'Invalid outlet_id' });
+      res.status(400).json({ message: "Invalid outlet_id" });
       return;
     }
 
-    const outlet = await Outlet.findOne({ 
-      where: { 
+    const outlet = await Outlet.findOne({
+      where: {
         outlet_id: outletIdNum,
-        isDeleted: false // Only edit non-deleted outlets
-      } 
+        isDeleted: false, // Only edit non-deleted outlets
+      },
     });
     if (!outlet) {
-      res.status(404).json({ message: 'Outlet not found' });
+      res.status(404).json({ message: "Outlet not found" });
       return;
     }
 
@@ -1600,13 +1670,18 @@ export const editOutlet = async (req: Request, res: Response): Promise<void> => 
 
     await outlet.save();
 
-    res.status(200).json({ message: 'Outlet updated successfully', outlet: outlet });
+    res
+      .status(200)
+      .json({ message: "Outlet updated successfully", outlet: outlet });
   } catch (error) {
-    console.error('Error updating outlet:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error updating outlet:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
-}
-export const deleteOutlet = async (req: Request, res: Response): Promise<void> => {
+};
+export const deleteOutlet = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { outlet_id } = req.params;
     const userId = (req as any).user.id;
@@ -1614,13 +1689,13 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
     const outletID = parseInt(outlet_id);
     const outlet = await Outlet.findOne({
       where: { outlet_id: outletID },
-      relations: ['business_account_subscription', 'vouchers', 'items']
+      relations: ["business_account_subscription", "vouchers", "items"],
     });
 
     if (!outlet) {
       res.status(404).json({
         status: 404,
-        message: 'Outlet not found',
+        message: "Outlet not found",
       });
       return;
     }
@@ -1630,19 +1705,26 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
     await outlet.save();
 
     // Soft delete related subscriptions
-    if (outlet.business_account_subscription && outlet.business_account_subscription.length > 0) {
-      await Promise.all(outlet.business_account_subscription.map(async (subscription) => {
-        subscription.status = "deleted";
-        await subscription.save();
-      }));
+    if (
+      outlet.business_account_subscription &&
+      outlet.business_account_subscription.length > 0
+    ) {
+      await Promise.all(
+        outlet.business_account_subscription.map(async (subscription) => {
+          subscription.status = "deleted";
+          await subscription.save();
+        })
+      );
     }
 
     // Soft delete related vouchers
     if (outlet.vouchers && outlet.vouchers.length > 0) {
-      await Promise.all(outlet.vouchers.map(async (voucher) => {
-        voucher.isDeleted = true;
-        await voucher.save();
-      }));
+      await Promise.all(
+        outlet.vouchers.map(async (voucher) => {
+          voucher.isDeleted = true;
+          await voucher.save();
+        })
+      );
     }
 
     // // Remove association between outlet and items
@@ -1655,25 +1737,40 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
 
     res.json({
       status: 200,
-      message: 'Outlet deleted successfully, related subscriptions marked as deleted and associations removed',
+      message:
+        "Outlet deleted successfully, related subscriptions marked as deleted and associations removed",
     });
   } catch (error) {
-    console.error('Error deleting outlet:', error);
+    console.error("Error deleting outlet:", error);
     res.status(500).json({
       status: 500,
-      message: 'Internal Server Error',
+      message: "Internal Server Error",
     });
   }
-}
+};
 
-export const createVoucher = async (req: Request, res: Response): Promise<void> => {
+export const createVoucher = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { name, description, price, discount, duration, business_id, outlet_id } = req.body;
+    const {
+      name,
+      description,
+      price,
+      discount,
+      duration,
+      business_id,
+      outlet_id,
+    } = req.body;
     const username = (req as any).user.username;
 
-    const businessAccount = await Business_account.findOne({ where: { username }, relations: ['business', 'outlets'] });
+    const businessAccount = await Business_account.findOne({
+      where: { username },
+      relations: ["business", "outlets"],
+    });
     if (!businessAccount) {
-      res.status(404).json({ message: 'Business account not found' });
+      res.status(404).json({ message: "Business account not found" });
       return;
     }
 
@@ -1681,7 +1778,7 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
     if (!req.file) {
       res.status(400).json({
         status: 400,
-        message: 'Voucher image is required'
+        message: "Voucher image is required",
       });
       return; // Exit the function early if no file is provided
     }
@@ -1698,9 +1795,11 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
 
     // If business_id is provided, associate with main business
     if (business_id) {
-      const business = await Business_register_business.findOne({ where: { registration_id: business_id } });
+      const business = await Business_register_business.findOne({
+        where: { registration_id: business_id },
+      });
       if (!business) {
-        res.status(404).json({ message: 'Business not found' });
+        res.status(404).json({ message: "Business not found" });
         return;
       }
       newVoucher.business_register_business = business;
@@ -1710,7 +1809,7 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
     if (outlet_id) {
       const outlet = await Outlet.findOne({ where: { outlet_id } });
       if (!outlet) {
-        res.status(404).json({ message: 'Outlet not found' });
+        res.status(404).json({ message: "Outlet not found" });
         return;
       }
       newVoucher.outlet = outlet;
@@ -1718,27 +1817,34 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
 
     // Save the voucher
     await newVoucher.save();
-    res.status(201).json({ message: 'Voucher created successfully', voucher: newVoucher });
-
+    res
+      .status(201)
+      .json({ message: "Voucher created successfully", voucher: newVoucher });
   } catch (error) {
-    console.error('Error creating voucher:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error creating voucher:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-export const getAllVoucher = async (req: Request, res: Response): Promise<void> => {
+export const getAllVoucher = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { registration_id, outlet_id, searchTerm } = req.query;
     //console.log('Received registration_id:', registration_id);
     //console.log('Received outlet_id:', outlet_id);
     let vouchers;
-    const query = Business_voucher.createQueryBuilder('voucher');
+    const query = Business_voucher.createQueryBuilder("voucher");
 
     // Apply search term if present
     if (searchTerm) {
-      query.andWhere('(voucher.name ILIKE :search OR voucher.description ILIKE :search)', {
-        search: `%${searchTerm}%`
-      });
+      query.andWhere(
+        "(voucher.name ILIKE :search OR voucher.description ILIKE :search)",
+        {
+          search: `%${searchTerm}%`,
+        }
+      );
     }
 
     if (registration_id) {
@@ -1746,13 +1852,15 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
       // Convert business_id to a number
       const registrationIdNum = parseInt(registration_id as string, 10);
       if (isNaN(registrationIdNum)) {
-        res.status(400).json({ message: 'Invalid registration_id' });
+        res.status(400).json({ message: "Invalid registration_id" });
         return;
       }
 
-      const business = await Business_register_business.findOne({ where: { registration_id: registrationIdNum } });
+      const business = await Business_register_business.findOne({
+        where: { registration_id: registrationIdNum },
+      });
       if (!business) {
-        res.status(404).json({ message: 'Business not found' });
+        res.status(404).json({ message: "Business not found" });
         return;
       }
       /*
@@ -1763,49 +1871,53 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
       */
 
       // Filter vouchers for the main business without an outlet
-      query.andWhere('voucher.business_register_business = :registrationId', { registrationId: registrationIdNum });
-      query.andWhere('voucher.outlet IS NULL'); // Ensure only vouchers without outlets are included
-
+      query.andWhere("voucher.business_register_business = :registrationId", {
+        registrationId: registrationIdNum,
+      });
+      query.andWhere("voucher.outlet IS NULL"); // Ensure only vouchers without outlets are included
     } else if (outlet_id) {
       // Fetch vouchers for the specific outlet
       // Convert outlet_id to a number
       const outletIdNum = parseInt(outlet_id as string, 10);
       if (isNaN(outletIdNum)) {
-        res.status(400).json({ message: 'Invalid outlet_id' });
+        res.status(400).json({ message: "Invalid outlet_id" });
         return;
       }
-      const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
+      const outlet = await Outlet.findOne({
+        where: { outlet_id: outletIdNum },
+      });
       if (!outlet) {
-        res.status(404).json({ message: 'Outlet not found' });
+        res.status(404).json({ message: "Outlet not found" });
         return;
       }
       /*
       vouchers = await Business_voucher.find({ where: { outlet: outlet }, relations: ['outlet'] });
       */
       // Filter vouchers for the specific outlet
-      query.andWhere('voucher.outlet = :outletId', { outletId: outletIdNum });
-
+      query.andWhere("voucher.outlet = :outletId", { outletId: outletIdNum });
     } else {
-      res.status(400).json({ message: 'Please provide either business_id or outlet_id' });
+      res
+        .status(400)
+        .json({ message: "Please provide either business_id or outlet_id" });
       return;
     }
 
-    query.andWhere('voucher.isDeleted = :isDeleted', { isDeleted: false });
+    query.andWhere("voucher.isDeleted = :isDeleted", { isDeleted: false });
 
     // Fetch the vouchers
     vouchers = await query.getMany();
 
     // If no vouchers are found
     if (!vouchers || vouchers.length === 0) {
-      res.status(200).json({ message: 'No vouchers found' });
+      res.status(200).json({ message: "No vouchers found" });
       return;
     }
 
     // Respond with the vouchers
     res.status(200).json({ vouchers });
   } catch (error) {
-    console.error('Error fetching vouchers:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error fetching vouchers:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -1856,7 +1968,7 @@ export const editVoucher = async (
 
     const voucher = await Business_voucher.findOne({
       where: { listing_id: voucherIdNum, isDeleted: false },
-      relations: ['rewardItem'],
+      relations: ["rewardItem"],
     });
     if (!voucher) {
       res.status(404).json({ message: "Voucher not found" });
@@ -2086,31 +2198,36 @@ export const verifyTopUpBusiness = async (
   }
 };
 
-export const getItemsByBusinessAccount = async (req: Request, res: Response): Promise<void> => {
+export const getItemsByBusinessAccount = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { username } = req.params;
 
     // Find the business account
     const businessAccount = await Business_account.findOne({
       where: { username },
-      relations: ['business', 'outlets']
+      relations: ["business", "outlets"],
     });
 
     if (!businessAccount) {
-      res.status(404).json({ message: 'Business account not found' });
+      res.status(404).json({ message: "Business account not found" });
       return;
     }
 
     // Get items associated with the main business
     const businessItems = await Item.find({
       where: { business_register_business: businessAccount.business },
-      relations: ['business_register_business']
+      relations: ["business_register_business"],
     });
 
     // Get items associated with all outlets
-    const outletItems = await Item.createQueryBuilder('item')
-      .innerJoinAndSelect('item.outlet', 'outlet')
-      .where('outlet.business = :businessId', { businessId: businessAccount.business_id })
+    const outletItems = await Item.createQueryBuilder("item")
+      .innerJoinAndSelect("item.outlet", "outlet")
+      .where("outlet.business = :businessId", {
+        businessId: businessAccount.business_id,
+      })
       .getMany();
 
     // Combine all items
@@ -2118,8 +2235,7 @@ export const getItemsByBusinessAccount = async (req: Request, res: Response): Pr
 
     res.status(200).json(allItems);
   } catch (error) {
-    console.error('Error fetching items for business account:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error fetching items for business account:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
-

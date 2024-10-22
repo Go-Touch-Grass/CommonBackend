@@ -123,6 +123,13 @@ export const getOneBusiness = async (req: Request, res: Response): Promise<void>
         const { business_id } = req.params;
         const id = parseInt(business_id);
         const business = await Business_account.findOneBy({ business_id: id }); // Fetch one business
+
+        if (!business){
+            res.status(404).json({
+                status: 404,
+                message: 'Business account not found'
+            });
+        }
         res.status(200).json(business);
     } catch (error) {
         console.log(error);
