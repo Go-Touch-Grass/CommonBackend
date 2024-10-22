@@ -17,6 +17,8 @@ import {
     getGroupPurchaseStatus,
     cancelGroupPurchaseStatus,
     getAllVouchersForCustomers,
+    getAllCreatedGroups,
+    getAllJoinedGroups,
 } from "../controllers/customer_account";
 import { UserRole } from '../entities/abstract/AbstractUser';
 
@@ -38,6 +40,9 @@ router.post('/auth/group-purchase/start', authMiddleware([UserRole.CUSTOMER]), s
 router.post('/auth/group-purchase/join', authMiddleware([UserRole.CUSTOMER]), joinGroupPurchase);
 router.get('/auth/group-purchase/status/:group_purchase_id', authMiddleware([UserRole.CUSTOMER]), getGroupPurchaseStatus);
 router.post('/auth/group-purchase/cancel', authMiddleware([UserRole.CUSTOMER]), cancelGroupPurchaseStatus);
+router.get('/auth/group-purchase/getAllCreatedGroups', authMiddleware([UserRole.CUSTOMER]), getAllCreatedGroups);
+router.get('/auth/group-purchase/getAllJoinedGroups', authMiddleware([UserRole.CUSTOMER]), getAllJoinedGroups);
+
 
 router.post('/auth/verify-topUp', authMiddleware([UserRole.CUSTOMER]), verifyTopUpCustomer);
 

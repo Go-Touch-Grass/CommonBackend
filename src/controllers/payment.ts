@@ -164,6 +164,7 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
 
     // Return success response
     groupPurchase.paymentStatus = 'completed';
+    await groupPurchase.save();
     return res.status(200).json({ message: "Group purchase completed successfully, and all users have been charged in gems." });
   } catch (error) {
     console.error("Error finalizing group purchase:", error.message);

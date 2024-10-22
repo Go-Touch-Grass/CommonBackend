@@ -210,6 +210,55 @@ export const getGroupPurchaseStatus = async (req: Request, res: Response) => {
     }
 };
 
+export const getAllCreatedGroups = async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    try {
+        // Fetch the customer account with their owned group purchases
+        const customer = await Customer_account.findOne({
+            where: { id: userId },
+            relations: ["ownedGroupPurchases", "ownedGroupPurchases.voucher", "ownedGroupPurchases.participants"]
+        });
+
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        // Extract and return the owned group purchases
+        const groupPurchases = customer.ownedGroupPurchases;
+
+        return res.status(200).json({
+            groupPurchases,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: "Error fetching created groups", error });
+    }
+};
+
+export const getAllJoinedGroups = async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    try {
+        // Fetch the customer account with their joined group purchases
+        const customer = await Customer_account.findOne({
+            where: { id: userId },
+            relations: ["participants", "participants.groupPurchase", "participants.groupPurchase.voucher"]
+        });
+
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        // Extract and return the joined group purchases, loop that takes in participant obj and return groupPurcahse of particpant
+        const joinedGroupPurchases = customer.participants.map(participant => participant.groupPurchase);
+
+        return res.status(200).json({
+            joinedGroupPurchases,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: "Error fetching joined groups", error });
+    }
+};
+
+
 export const cancelGroupPurchaseStatus = async (req: Request, res: Response) => {
     const { group_purchase_id, creator_id } = req.body;
 
