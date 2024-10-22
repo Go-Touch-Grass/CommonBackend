@@ -1645,7 +1645,7 @@ export const editOutlet = async (req: Request, res: Response): Promise<void> => 
     try {
         const { outlet_id } = req.params;
         const updatedData = req.body;
-        console.log('EditOutlet - Updated data:', updatedData);
+        //console.log('EditOutlet - Updated data:', updatedData);
         const outletIdNum = parseInt(outlet_id, 10);
         if (isNaN(outletIdNum)) {
             res.status(400).json({ message: 'Invalid outlet_id' });
@@ -1664,7 +1664,7 @@ export const editOutlet = async (req: Request, res: Response): Promise<void> => 
         }
 
         // Update outlet fields based on the provided data
-        outlet.outlet_name = updatedData.name;
+        outlet.outlet_name = updatedData.outlet_name;
         outlet.location = updatedData.location;
         outlet.description = updatedData.description;
         outlet.contact = updatedData.contact;
