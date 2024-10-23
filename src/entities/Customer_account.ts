@@ -16,6 +16,8 @@ import { Customer_transaction } from "./Customer_transaction";
 import { AbstractStripeUser } from "./abstract/AbstractStripeUser";
 import { Item } from "./Item";
 import { Customer_inventory } from "./Customer_inventory";
+import { Customer_group_participant } from "./Customer_group_participant";
+import { Customer_group_purchase } from "./Customer_group_purchase";
 
 @Entity("customer_account")
 export class Customer_account extends AbstractStripeUser {
@@ -144,5 +146,13 @@ export class Customer_account extends AbstractStripeUser {
 	})
 	@JoinColumn({ name: "customer_id" }) // Ensure this is set correctly
 	customer_inventory: Customer_inventory;
+
+
+	@OneToMany(() => Customer_group_purchase, groupPurchase => groupPurchase.creator)
+	ownedGroupPurchases: Customer_group_purchase[];
+
+
+	@OneToMany(() => Customer_group_participant, participant => participant.customer)
+	participants: Customer_group_participant[];
 
 }

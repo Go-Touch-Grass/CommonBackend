@@ -6,14 +6,48 @@ import { Voucher_transaction } from "../entities/Voucher_transaction";
 import { Item, ItemType } from "../entities/Item";
 import { In, IsNull } from "typeorm";
 import { statusEnum } from "../entities/Business_register_business";
+import { Customer_voucher } from "../entities/Customer_vouchers";
+
+export const updateVoucherStatus = async (req, res) => {
+    const { voucherId, status } = req.body; // Get voucherId and status from request body
+
+    if (typeof voucherId !== 'number' || typeof status !== 'boolean') {
+        return res.status(400).json({ error: 'Voucher ID must be a number and status must be a boolean value' });
+    }
+
+    try {
+        // Find the voucher by ID
+        const voucher = await Customer_voucher.findOne({ where: { id: voucherId } });
+
+        if (!voucher) {
+            return res.status(404).json({ error: 'Voucher not found' });
+        }
+
+        // Update the voucher's status
+        voucher.status = false; // Assuming `redeemed` is the field to be updated
+        await voucher.save();
+
+        return res.status(200).json({ message: 'Voucher status updated successfully', voucher });
+    } catch (error) {
+        console.error('Error updating voucher status:', error);
+        return res.status(500).json({ error: 'An error occurred while updating the voucher status' });
+    }
+};
+
 
 export const getVoucherInventory = async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = (req as any).user.id;
+        console.log('User ID:', userId);
 
+        // Fetch customer account with inventory and related vouchers (Customer_voucher)
         const customerAccount = await Customer_account.findOne({
             where: { id: userId },
-            relations: ["customer_inventory", "customer_inventory.vouchers"],
+            relations: [
+                "customer_inventory",
+                "customer_inventory.voucherInstances", // Customer_vouchers related to inventory
+                "customer_inventory.voucherInstances.voucher", // Business_voucher associated with Customer_voucher
+            ],
         });
 
         if (!customerAccount || !customerAccount.customer_inventory) {
@@ -22,29 +56,38 @@ export const getVoucherInventory = async (req: Request, res: Response): Promise<
         }
 
         const inventory = customerAccount.customer_inventory;
+        const voucherInstances = inventory.voucherInstances;
 
-        if (!inventory.vouchers || inventory.vouchers.length === 0) {
+        if (!voucherInstances || voucherInstances.length === 0) {
             res.status(404).json({ status: 404, message: "No vouchers found in inventory" });
             return;
         }
 
+        // Fetch all voucher transactions for the user (only redeem information)
         const voucherTransactions = await Voucher_transaction.find({
             where: { customerId: userId },
-            relations: ['voucher'],
+            relations: ['voucher'], // Business_voucher relation to get transaction details
         });
 
-        const vouchersWithTransactions = inventory.vouchers.map(voucher => {
-            const transaction = voucherTransactions.find(t => t.voucher.listing_id === voucher.listing_id);
+        // Map the customer vouchers (Customer_voucher) and fetch their related Business_voucher details
+        const vouchersWithDetails = voucherInstances.map(customerVoucher => {
+            const businessVoucher = customerVoucher.voucher;
+            const transaction = voucherTransactions.find(t => t.voucher.listing_id === businessVoucher.listing_id);
+
             return {
-                ...voucher,
-                voucher_transaction_id: transaction ? transaction.id : null,
+                ...businessVoucher,
                 redeemed: transaction ? transaction.redeemed : false,
+                transaction_id: transaction ? transaction.id : null,
+                quantity: customerVoucher.quantity,
+                status: customerVoucher.status
             };
         });
 
+
+        // Respond with the voucher details and transaction info
         res.json({
             status: 200,
-            vouchers: vouchersWithTransactions,
+            vouchers: vouchersWithDetails,
             inventoryUsed: inventory.used,
         });
     } catch (error) {
@@ -55,9 +98,10 @@ export const getVoucherInventory = async (req: Request, res: Response): Promise<
 
 export const purchaseVoucher = async (req: Request, res: Response): Promise<void> => {
     const userId = (req as any).user.id;
-    const { voucherId } = req.body;
+    const { voucherId, quantity = 1 } = req.body; // Accepting quantity if needed
 
     try {
+        // Fetch the Business Voucher
         const voucher = await Business_voucher.findOne({
             where: { listing_id: voucherId },
             relations: ['business_register_business', 'outlet', 'rewardItem']
@@ -71,24 +115,29 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
         const discountedPrice = voucher.price - (voucher.price * (voucher.discount / 100));
         const conversionRate = 10;
         const discountedPriceInGems = Math.round(discountedPrice * conversionRate);
+        const totalCost = discountedPriceInGems * quantity;
 
+        // Fetch the customer account
         const customer = await Customer_account.findOne({ where: { id: userId } });
         if (!customer) {
             res.status(404).json({ message: "Customer not found" });
             return;
         }
 
-        if (customer.gem_balance < discountedPriceInGems) {
+        // Check if the customer has enough gems
+        if (customer.gem_balance < totalCost) {
             res.status(400).json({ message: "Insufficient gem balance" });
             return;
         }
 
-        customer.gem_balance -= discountedPriceInGems;
+        // Deduct the total cost from the customer's gem balance
+        customer.gem_balance -= totalCost;
         await customer.save();
 
+        // Fetch or create the customer's inventory
         let inventory = await Customer_inventory.findOne({
             where: { customer_account: { id: userId } },
-            relations: ['vouchers'],
+            relations: ['voucherInstances'],
         });
 
         if (!inventory) {
@@ -97,35 +146,49 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
             await inventory.save();
         }
 
-        if (!inventory.vouchers.includes(voucher)) {
-            inventory.vouchers.push(voucher);
-            await inventory.save();
-        }
+        // Check if the customer already owns this voucher
+        let customerVoucher = await Customer_voucher.findOne({
+            where: { inventory: { id: inventory.id }, voucher: { listing_id: voucher.listing_id } },
+        });
 
-        // Add reward item to customer's inventory if it exists
+        if (customerVoucher) {
+            // If they already own the voucher, update the quantity
+            customerVoucher.quantity += quantity;
+        } else {
+            // Otherwise, create a new Customer_voucher entry
+            customerVoucher = new Customer_voucher();
+            customerVoucher.inventory = inventory;
+            customerVoucher.voucher = voucher;
+            customerVoucher.quantity = quantity;
+        }
+        await customerVoucher.save();
+
+        // Add reward item to customer's inventory if applicable
         if (voucher.rewardItem) {
-            const customer = await Customer_account.findOne({
+            const customerWithItems = await Customer_account.findOne({
                 where: { id: userId },
                 relations: ['ownedItems']
             });
 
-            if (customer) {
-                const alreadyOwnsItem = customer.ownedItems.some(item => item.id === voucher.rewardItem!.id);
+            if (customerWithItems) {
+                const alreadyOwnsItem = customerWithItems.ownedItems.some(item => item.id === voucher.rewardItem!.id);
                 if (!alreadyOwnsItem) {
-                    customer.ownedItems.push(voucher.rewardItem);
-                    await customer.save();
+                    customerWithItems.ownedItems.push(voucher.rewardItem);
+                    await customerWithItems.save();
                 }
             }
         }
 
-        const transaction = new Voucher_transaction();
-        transaction.voucher = voucher;
-        transaction.gems_spent = discountedPriceInGems;
-        transaction.customerId = userId;
-        transaction.redeemed = false;
-        transaction.purchaseDate = new Date();
-        await transaction.save();
+        // Record the transaction
+        //const transaction = new Voucher_transaction();
+        //transaction.voucher = voucher;
+        //transaction.gems_spent = totalCost;
+        //transaction.customerId = userId;
+        //transaction.redeemed = false;
+        //transaction.purchaseDate = new Date();
+        //await transaction.save();
 
+        // Return success response
         res.status(201).json({
             message: "Voucher purchased successfully",
             voucher: {
@@ -137,7 +200,8 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
                 discounted_price: discountedPrice,
                 discounted_price_in_gems: discountedPriceInGems,
                 duration: voucher.duration,
-                voucher_transaction_id: transaction.id,
+                //voucher_transaction_id: transaction.id,
+                quantity: customerVoucher.quantity, // Returning the quantity
                 reward_item: voucher.rewardItem ? {
                     id: voucher.rewardItem.id,
                     name: voucher.rewardItem.name,
@@ -151,49 +215,54 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
     }
 };
 
-export const redeemVoucherTransaction = async (req: Request, res: Response): Promise<void> => {
+export const redeemVoucher = async (req: Request, res: Response): Promise<void> => {
+    const userId = (req as any).user.id;
+    const { voucherId } = req.body; // Accepting the voucher ID to redeem
+
+    // Log the voucherId to see what is passed
+    console.log('Voucher ID received for redemption:', voucherId);
+
     try {
-        const { transactionId } = req.params;
-
-        const transactionIdNum = parseInt(transactionId, 10);
-        if (isNaN(transactionIdNum)) {
-            res.status(400).json({ message: 'Invalid transaction_id' });
-            return;
-        }
-
-        const transaction = await Voucher_transaction.findOne({
-            where: { id: transactionIdNum },
-            relations: ['voucher'],
+        // Fetch the customer's voucher
+        const customerVoucher = await Customer_voucher.findOne({
+            where: {
+                voucher: { listing_id: voucherId },
+                inventory: { customer_account: userId }, // Assuming customer_account is directly linked to inventory
+            },
+            relations: ['voucher', 'inventory', 'inventory.customer_account'],
         });
 
-        if (!transaction) {
-            res.status(404).json({ message: 'Voucher transaction not found' });
+        // Check if the voucher exists and if the customer has sufficient quantity
+        if (!customerVoucher || customerVoucher.quantity <= 0) {
+            res.status(404).json({ message: "Voucher not found or insufficient quantity" });
             return;
         }
 
-        if (transaction.redeemed) {
-            res.status(400).json({ message: 'Voucher transaction already redeemed' });
-            return;
-        }
+        // Create a new transaction for redemption
+        const transaction = new Voucher_transaction();
 
-        transaction.redeemed = true;
-        await transaction.save();
+        // Assign the voucher entity to the transaction
+        transaction.voucher = customerVoucher.voucher; // Ensure this is the correct entity
+        transaction.customerId = userId;
+        transaction.redeemed = "pending"; // Set as redeemed
+        transaction.purchaseDate = new Date();
+        transaction.gems_spent = (customerVoucher.voucher.discountedPrice) * 10;
+        await transaction.save(); // Save the transaction
 
+        // Return success response
         res.status(200).json({
-            id: transaction.id,
-            voucherId: transaction.voucher.listing_id,
-            voucher_transaction_id: transaction.id,
-            voucherName: transaction.voucher.name,
-            customerId: transaction.customerId,
-            redeemed: transaction.redeemed,
-            purchaseDate: transaction.purchaseDate.toISOString(),
-            expirationDate: transaction.voucher.expirationDate.toISOString(),
+            message: "Voucher redeemed successfully, awaiting business approval.",
+            transaction_id: transaction.id,
         });
     } catch (error) {
-        console.error('Error redeeming voucher transaction:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
     }
 };
+
+
+
+
 
 export const addItemToCustomerInventory = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -260,10 +329,10 @@ export const getCustomerItems = async (req: Request, res: Response): Promise<voi
         const items = await Item.find({
             where: [
                 { id: In(ownedItemIds) },
-                { 
+                {
                     business_register_business: IsNull(),
                     outlet: IsNull(),
-                    status: statusEnum.APPROVED 
+                    status: statusEnum.APPROVED
                 }
             ]
         });

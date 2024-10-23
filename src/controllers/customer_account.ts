@@ -8,6 +8,545 @@ import { BusinessAccountSubscription } from '../entities/Business_account_subscr
 import { generateOTP, sendOTPEmail } from '../utils/otp';
 import { stripe } from "../index";
 import { Customer_inventory } from "../entities/Customer_inventory";
+import { Business_voucher } from "../entities/Business_voucher";
+import { Voucher_transaction } from "../entities/Voucher_transaction";
+import { Customer_group_purchase } from "../entities/Customer_group_purchase";
+import { Customer_group_participant } from "../entities/Customer_group_participant";
+import { MoreThan } from "typeorm";
+
+
+
+export const startGroupPurchase = async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { voucher_id, group_size, expires_at } = req.body;
+    // Log the inputs for debugging
+    console.log('Received userId:', userId);
+    console.log('Received voucher_id:', voucher_id);
+    try {
+        const voucher = await Business_voucher.findOne({
+            where: { listing_id: voucher_id },
+        });
+        //const creator = await Customer_account.findOne(userId);
+        const creator = await Customer_account.findOne({
+            where: { id: userId },
+        });
+        console.warn(req.body.expires_at);
+
+
+        if (!voucher || !creator) {
+            return res.status(404).json({ message: "Voucher or creator not found" });
+        }
+
+        const groupPurchase = Customer_group_purchase.create({
+            voucher,
+            creator,
+            group_size,
+            current_size: 1, // Creator counts as the first member
+            groupStatus: "pending",
+            expires_at,
+        });
+
+        await groupPurchase.save();
+
+        // Add the creator as the first participant
+        const participant = Customer_group_participant.create({
+            groupPurchase,
+            customer: creator,
+            joined_at: new Date(),
+        });
+        await participant.save();
+
+        return res.status(201).json(groupPurchase);
+    } catch (error) {
+        console.error("Backend Error:", error); // Log the specific error
+        return res.status(500).json({ message: "Error starting group purchase", error: error.message });
+    }
+};
+
+{/*
+export const joinGroupPurchase = async (req: Request, res: Response) => {
+    const { group_purchase_id } = req.body;
+    const customer_id = (req as any).user.id;
+
+    try {
+        const groupPurchase = await Customer_group_purchase.findOne({
+            where: { id: group_purchase_id },
+            relations: ["participants"],
+        });
+
+        const customer = await Customer_account.findOne({
+            where: { id: customer_id },
+        });
+
+        if (!groupPurchase || !customer) {
+            return res.status(404).json({ message: "Group purchase or customer not found" });
+        }
+
+        // Check if the group is full or expired
+        if (groupPurchase.current_size >= groupPurchase.group_size) {
+            return res.status(400).json({ message: "Group purchase is already complete" });
+        }
+
+        if (new Date() > groupPurchase.expires_at) {
+            return res.status(400).json({ message: "Group purchase has expired" });
+        }
+
+        // Add the new participant
+        const participant = Customer_group_participant.create({
+            groupPurchase,  // Ensure this field is properly set
+            customer,
+            joined_at: new Date(),
+        });
+
+        await participant.save();
+
+        // Update the group size
+        groupPurchase.current_size += 1;
+
+        // If the group is complete, update the status
+        if (groupPurchase.current_size === groupPurchase.group_size) {
+            groupPurchase.status = "complete";
+        }
+
+        await groupPurchase.save();
+
+        return res.status(200).json(groupPurchase);
+    } catch (error) {
+        return res.status(500).json({ message: "Error joining group purchase", error: error.message });
+    }
+};
+*/}
+
+export const joinGroupPurchase = async (req: Request, res: Response) => {
+    const { group_purchase_id } = req.body;
+    console.log("group_purchase_id", group_purchase_id);
+    const customer_id = (req as any).user.id;
+
+    try {
+        const groupPurchase = await Customer_group_purchase.findOne({
+            where: { id: group_purchase_id },
+            relations: ["participants", "participants.customer"],
+        });
+        //console.log("groupPurchase in join:", groupPurchase);
+
+        const customer = await Customer_account.findOne({
+            where: { id: customer_id },
+        });
+
+        if (!groupPurchase || !customer) {
+            return res.status(404).json({ message: "Group purchase or customer not found" });
+        }
+
+        // Check if the group is full or expired
+        if (groupPurchase.current_size >= groupPurchase.group_size) {
+            return res.status(400).json({ message: "Group purchase is already complete" });
+        }
+        if (new Date() > groupPurchase.expires_at) {
+            return res.status(400).json({ message: "Group purchase has expired" });
+        }
+
+        // Check if the customer has already joined this group purchase
+        const existingParticipant = groupPurchase.participants.find(participant => participant.customer.id === customer.id);
+        if (existingParticipant) {
+            return res.status(400).json({ message: "Customer has already joined this group purchase." });
+        }
+
+        // Add the new participant
+        const participant = Customer_group_participant.create({
+            //groupPurchase: { id: group_purchase_id },
+            groupPurchase: groupPurchase,
+            customer: customer,
+            joined_at: new Date(),
+            payment_status: "pending",
+
+        });
+        await participant.save();
+
+
+        groupPurchase.current_size += 1;  // Updat group size
+
+        if (groupPurchase.current_size === groupPurchase.group_size) {
+            groupPurchase.groupStatus = "completed"; //group full
+        }
+        groupPurchase.participants.push(participant); // Add the new participant to the group purchase
+        await groupPurchase.save();
+
+        // Reload the groupPurchase entity to include the newly added participant
+        const updatedGroupPurchase = await Customer_group_purchase.findOne({
+            where: { id: group_purchase_id },
+            relations: ["participants", "participants.customer"],
+        });
+        if (updatedGroupPurchase) {
+            console.log("Participants in the updated group purchase:", updatedGroupPurchase.participants);
+        } else {
+            console.log("Failed to reload the updated group purchase.");
+        }
+
+        console.log("updatedGroupPurchase in join", updatedGroupPurchase);
+        //console.log("returning group purchase", groupPurchase);
+        return res.status(200).json(updatedGroupPurchase);
+    } catch (error) {
+        console.error("Error in joinGroupPurchase:", error.message);
+        return res.status(500).json({ message: "Error joining group purchase", error: error.message });
+    }
+};
+
+export const getGroupPurchaseStatus = async (req: Request, res: Response) => {
+    const { group_purchase_id } = req.params;
+
+    try {
+        const groupPurchase = await Customer_group_purchase.findOne({
+            where: { id: Number(group_purchase_id) },
+            relations: ["voucher", "participants", "creator"],
+        });
+
+        if (!groupPurchase) {
+            return res.status(404).json({ message: "Group purchase not found" });
+        }
+
+        return res.status(200).json(groupPurchase);
+    } catch (error) {
+        return res.status(500).json({ message: "Error fetching group purchase status", error });
+    }
+};
+
+export const getAllCreatedGroups = async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    try {
+        // Fetch the customer account with their owned group purchases
+        const customer = await Customer_account.findOne({
+            where: { id: userId },
+            relations: ["ownedGroupPurchases", "ownedGroupPurchases.voucher", "ownedGroupPurchases.participants"]
+        });
+
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        // Extract and return the owned group purchases
+        const groupPurchases = customer.ownedGroupPurchases;
+
+        return res.status(200).json({
+            groupPurchases,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: "Error fetching created groups", error });
+    }
+};
+
+export const getAllJoinedGroups = async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    try {
+        // Fetch the customer account with their joined group purchases
+        const customer = await Customer_account.findOne({
+            where: { id: userId },
+            relations: ["participants", "participants.groupPurchase", "participants.groupPurchase.voucher"]
+        });
+
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        // Extract and return the joined group purchases, loop that takes in participant obj and return groupPurcahse of particpant
+        const joinedGroupPurchases = customer.participants.map(participant => participant.groupPurchase);
+
+        return res.status(200).json({
+            joinedGroupPurchases,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: "Error fetching joined groups", error });
+    }
+};
+
+
+export const cancelGroupPurchaseStatus = async (req: Request, res: Response) => {
+    const { group_purchase_id, creator_id } = req.body;
+
+    try {
+        // Fetch the group purchase
+        const groupPurchase = await Customer_group_purchase.findOne({
+            where: { id: Number(group_purchase_id) },
+            relations: ["creator"],
+        });
+
+        if (!groupPurchase) {
+            return res.status(404).json({ message: "Group purchase not found." });
+        }
+
+        // Ensure only the creator can cancel it and it's still pending
+        if (groupPurchase.creator.id !== creator_id || groupPurchase.groupStatus !== "pending") {
+            return res.status(403).json({ message: "You can only cancel a pending group purchase as the creator." });
+        }
+
+        // Mark the group purchase as canceled
+        groupPurchase.groupStatus = "canceled";
+        await groupPurchase.save();
+
+        return res.status(200).json({ message: "Group purchase canceled successfully." });
+
+    } catch (error) {
+        console.error("Error canceling group purchase:", error);
+        return res.status(500).json({ message: "Error canceling group purchase" });
+    }
+};
+
+// TEMPORARY Endpoint to get all available vouchers for customers
+export const getAllVouchersForCustomers = async (req: Request, res: Response) => {
+    try {
+        // Optional: Add filtering logic such as only fetching active or non-expired vouchers
+        const vouchers = await Business_voucher.find({
+            relations: ['business_register_business', 'outlet'], // Include business and outlet relations if needed
+            where: {
+                // You can add any filter conditions here (e.g., expiration date)
+                expirationDate: MoreThan(new Date()) // Only show non-expired vouchers
+            }
+        });
+
+        if (!vouchers || vouchers.length === 0) {
+            return res.status(404).json({ message: 'No vouchers found' });
+        }
+
+        return res.status(200).json({ vouchers });
+    } catch (error) {
+        console.error('Error fetching vouchers:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+
+export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { transactionId } = req.params; // Get the transactionId from the route params
+
+        // Convert transactionId to number for validation
+        const transactionIdNum = parseInt(transactionId, 10);
+        if (isNaN(transactionIdNum)) {
+            res.status(400).json({ message: 'Invalid transaction ID' });
+            return;
+        }
+
+        // Find the transaction by ID
+        const transaction = await Voucher_transaction.findOne({ where: { id: transactionIdNum } });
+
+        if (!transaction) {
+            res.status(404).json({ message: 'Voucher transaction not found' });
+            return;
+        }
+
+        // Check if the voucher has already been used
+        if (transaction.used) {
+            res.status(400).json({ message: 'Voucher transaction already used' });
+            return;
+        }
+
+        // Update the "used" status to true
+        transaction.used = true;
+        await transaction.save();
+
+        // Respond with the updated transaction
+        res.status(200).json({
+            message: 'Voucher transaction status updated successfully',
+            transaction: {
+                id: transaction.id,
+                used: transaction.used,
+                customerId: transaction.customerId,
+                voucherId: transaction.voucherId,
+            }
+        });
+    } catch (error) {
+        console.error('Error updating voucher transaction status:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+{/* 
+export const redeemVoucherTransaction = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { transactionId } = req.params;
+
+        const transactionIdNum = parseInt(transactionId, 10);
+        if (isNaN(transactionIdNum)) {
+            res.status(400).json({ message: 'Invalid transaction_id' });
+            return;
+        }
+
+        const transaction = await Voucher_transaction.findOne({
+            where: { id: transactionIdNum },
+            relations: ['voucher'],
+        });
+
+        if (!transaction) {
+            res.status(404).json({ message: 'Voucher transaction not found' });
+            return;
+        }
+
+
+        if (transaction.redeemed) {
+            res.status(400).json({ message: 'Voucher transaction already redeemed' });
+            return;
+        }
+
+
+        transaction.redeemed = true;
+        await transaction.save();
+
+
+        res.status(200).json({
+            id: transaction.id,
+            voucherId: transaction.voucher.listing_id,
+            voucher_transaction_id: transaction.id,
+            voucherName: transaction.voucher.name,
+            customerId: transaction.customerId,
+            redeemed: transaction.redeemed,
+            purchaseDate: transaction.purchaseDate.toISOString(),
+            expirationDate: transaction.voucher.expirationDate.toISOString(),
+        });
+    } catch (error) {
+        console.error('Error redeeming voucher transaction:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const purchaseVoucher = async (req: Request, res: Response): Promise<void> => {
+    const userId = (req as any).user.id;
+    const { voucherId } = req.body;
+
+    try {
+        // Fetch the voucher by listing_id
+        const voucher = await Business_voucher.findOne({
+            where: { listing_id: voucherId },
+            relations: ['business_register_business', 'outlet']
+        });
+
+        if (!voucher) {
+            res.status(404).json({ message: "Voucher not found" });
+            return;
+        }
+
+        // Calculate the discounted price
+        const discountedPrice = voucher.price - (voucher.price * (voucher.discount / 100));
+        const conversionRate = 10;
+        const discountedPriceInGems = Math.round(discountedPrice * conversionRate);
+
+        // Fetch the customer account
+        const customer = await Customer_account.findOne({ where: { id: userId } });
+        if (!customer) {
+            res.status(404).json({ message: "Customer not found" });
+            return;
+        }
+
+        // Check if the customer has enough gems
+        if (customer.gem_balance < discountedPriceInGems) {
+            res.status(400).json({ message: "Insufficient gem balance" });
+            return;
+        }
+
+        // Deduct gems from the customer's balance
+        customer.gem_balance -= discountedPriceInGems;
+        await customer.save();
+
+        // Fetch or create the customer's inventory
+        let inventory = await Customer_inventory.findOne({
+            where: { customer_account: { id: userId } },
+            relations: ['vouchers'],
+        });
+
+        if (!inventory) {
+            inventory = new Customer_inventory();
+            inventory.customer_account = customer;
+            await inventory.save(); // Save the inventory first
+        }
+
+        // Ensure the voucher relationship is set up properly
+        if (!inventory.vouchers.includes(voucher)) {
+            inventory.vouchers.push(voucher);
+            await inventory.save(); // Save the updated inventory with the new voucher
+        }
+
+        // Create a voucher transaction record
+        const transaction = new Voucher_transaction();
+        transaction.voucher = voucher;
+        transaction.gems_spent = discountedPriceInGems;
+        transaction.customerId = userId;
+        transaction.redeemed = false;
+        transaction.purchaseDate = new Date();
+        await transaction.save();
+
+        // Return a success response
+        res.status(201).json({
+            message: "Voucher purchased successfully",
+            voucher: {
+                listing_id: voucher.listing_id,
+                name: voucher.name,
+                description: voucher.description,
+                original_price: voucher.price,
+                discount: voucher.discount,
+                discounted_price: discountedPrice,
+                discounted_price_in_gems: discountedPriceInGems,
+                duration: voucher.duration,
+                voucher_transaction_id: transaction.id,
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getVoucherInventory = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+
+        const customerAccount = await Customer_account.findOne({
+            where: { id: userId },
+            relations: ["customer_inventory", "customer_inventory.vouchers"], // Ensure vouchers are loaded
+        });
+
+        console.log('Fetched Customer Account:', JSON.stringify(customerAccount, null, 2));
+
+        if (!customerAccount || !customerAccount.customer_inventory) {
+            res.status(404).json({ status: 404, message: "User or inventory not found" });
+            return;
+        }
+
+        const inventory = customerAccount.customer_inventory;
+        console.log('Fetched Inventory:', JSON.stringify(inventory, null, 2));
+
+        if (!inventory.vouchers || inventory.vouchers.length === 0) {
+            res.status(404).json({ status: 404, message: "No vouchers found in inventory" });
+            return;
+        }
+
+        // Fetch voucher transactions to determine if any are redeemed
+        const voucherTransactions = await Voucher_transaction.find({
+            where: { customerId: userId },
+            relations: ['voucher'], // Include voucher details if needed
+        });
+
+        const vouchersWithTransactions = inventory.vouchers.map(voucher => {
+            const transaction = voucherTransactions.find(t => t.voucher.listing_id === voucher.listing_id);
+            return {
+                ...voucher,
+                voucher_transaction_id: transaction ? transaction.id : null, // Assign the transaction ID or null if not found
+                redeemed: transaction ? transaction.redeemed : false, // Ensure 'redeemed' reflects the actual transaction state
+            };
+        });
+
+
+        res.json({
+            status: 200,
+            vouchers: vouchersWithTransactions,
+            inventoryUsed: inventory.used,
+        });
+    } catch (error) {
+        console.error('Error fetching vouchers:', error);
+        res.status(500).json({ status: 500, message: "Internal server error" });
+    }
+};
+
+*/}
+
+
+
 // Function to calculate total XP required to reach a certain level
 function calculateTotalXpForLevel(level: number): number {
     if (level <= 1) return 0;
@@ -577,14 +1116,14 @@ export const getAllValidSubscription = async (req: Request, res: Response) => {
         const subscriptionsWithValidBanStatus = activeSubscriptions.filter(subscription => {
             const isOutlet = !!subscription.outlet;
 
-            if (isOutlet){
+            if (isOutlet) {
                 const outletBanStatus = subscription.outlet?.banStatus;
                 return outletBanStatus === false
             } else {
                 const businessBanStatus = subscription.business_register_business?.banStatus;
                 return businessBanStatus === false
-            } 
-          });
+            }
+        });
 
         // Map the subscriptions to include the business or outlet details and avatar information
         const subscriptionsWithAvatars = subscriptionsWithValidBanStatus.map((subscription) => {
@@ -626,7 +1165,7 @@ export const getAllValidSubscription = async (req: Request, res: Response) => {
                         registrationId: subscription.business_register_business?.registration_id,
                         entityName: subscription.business_register_business?.entityName,
                         location: subscription.business_register_business?.location,
-                        banStatus:subscription.business_register_business?.banStatus,
+                        banStatus: subscription.business_register_business?.banStatus,
                         category: subscription.business_register_business?.category,
                         avatar: avatar
                             ? {

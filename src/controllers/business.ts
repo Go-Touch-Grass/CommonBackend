@@ -23,10 +23,9 @@ import { Voucher_transaction } from '../entities/Voucher_transaction';
 import { Customer_account } from '../entities/Customer_account';
 import { Customer_inventory } from '../entities/Customer_inventory';
 
-
-export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
+export const handleMarkUsed = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { transactionId, redeemed } = req.body;
+    const { transactionId } = req.body; // Assuming the transaction ID is sent in the request body
     const transactionIdNum = parseInt(transactionId, 10);
 
     if (isNaN(transactionIdNum)) {
@@ -34,9 +33,10 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
       return;
     }
 
+    // Find the transaction by ID
     const transaction = await Voucher_transaction.findOne({
       where: { id: transactionIdNum },
-      relations: ['voucher'], // Load the associated voucher
+      relations: ['voucher'], // Load the associated voucher if needed
     });
 
     if (!transaction || !transaction.voucher) {
@@ -44,37 +44,105 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
       return;
     }
 
-    if (transaction.used) {
-      res.status(400).json({ message: 'Voucher transaction already redeemed' });
+    // Check if the transaction is already marked as used
+    if (transaction.used === true) { // Assuming 'used' is a boolean property
+      res.status(400).json({ message: 'Voucher transaction already marked as used' });
       return;
     }
 
     // Mark the transaction as used
-    transaction.used = redeemed;
+    transaction.used = true; // Set the used status to true
 
-    // If the voucher is being redeemed, find the corresponding customer inventory
-    const customerInventory = await Customer_inventory.findOne({
-      where: { customer_account: { id: transaction.customerId } }, // Use an object to reference the customer account
-      relations: ['vouchers'], // Load associated vouchers
+    // Save the updated transaction
+    await transaction.save();
+
+    res.status(200).json({
+      message: 'Voucher transaction marked as used successfully',
+      transaction: {
+        id: transaction.id,
+        used: transaction.used, // Return the updated used status
+        customerId: transaction.customerId,
+        voucherId: transaction.voucherId,
+      },
+    });
+  } catch (error) {
+    console.error('Error marking voucher transaction as used:', error.message);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const updateVoucherTransactionStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { transactionId, redeemed } = req.body; // Assuming redeemed is a string ('yes', 'no', 'pending')
+    const transactionIdNum = parseInt(transactionId, 10);
+
+    if (isNaN(transactionIdNum)) {
+      res.status(400).json({ message: 'Invalid transaction ID' });
+      return;
+    }
+
+    // Find the transaction by ID
+    const transaction = await Voucher_transaction.findOne({
+      where: { id: transactionIdNum },
+      relations: ['voucher'], // Load the associated voucher if needed
     });
 
-    if (customerInventory) {
-      // Check if the customer inventory has the voucher in its collection
-      const hasVoucher = customerInventory.vouchers.some(v => v.listing_id === transaction.voucher.listing_id);
+    if (!transaction || !transaction.voucher) {
+      res.status(404).json({ message: 'Voucher transaction or associated voucher not found' });
+      return;
+    }
 
-      if (hasVoucher) {
-        customerInventory.used = true; // Mark inventory as used
-        await customerInventory.save(); // Save the updated inventory
+    // Check if the transaction is already redeemed
+    if (transaction.redeemed === 'yes') {
+      res.status(400).json({ message: 'Voucher transaction already redeemed' });
+      return;
+    }
+
+    // Update the transaction's redeemed status
+    transaction.redeemed = redeemed; // Set the redeemed status to the value from the request body
+
+    // If the voucher is being redeemed ('yes'), find the corresponding customer inventory
+    if (redeemed === 'yes') {
+      const customerInventory = await Customer_inventory.findOne({
+        where: { customer_account: { id: transaction.customerId } }, // Use an object to reference the customer account
+        relations: ['voucherInstances'], // Load associated voucher instances
+      });
+
+      if (customerInventory) {
+        // Find the specific voucher instance in the customer's inventory
+        const customerVoucher = customerInventory.voucherInstances.find(v => v.id === transaction.voucher.listing_id);
+
+        if (customerVoucher) {
+          // Deduct the quantity by 1 upon redemption
+          if (customerVoucher.quantity > 0) {
+            customerVoucher.quantity -= 1; // Decrease quantity by 1
+
+            // Save the updated voucher in the customer's inventory
+            await customerVoucher.save();
+
+            if (customerVoucher.quantity === 0) {
+              // Optional: Handle logic for when the voucher is fully used up, if needed
+              console.log('Voucher fully redeemed');
+            }
+          } else {
+            res.status(400).json({ message: 'Voucher quantity is already 0' });
+            return;
+          }
+        } else {
+          res.status(404).json({ message: 'Voucher not found in customer inventory' });
+          return;
+        }
       }
     }
 
-    await transaction.save(); // Save the updated transaction
+    // Save the updated transaction
+    await transaction.save();
 
     res.status(200).json({
-      message: 'Voucher transaction redeemed successfully',
+      message: 'Voucher transaction redeemed and quantity updated successfully',
       transaction: {
         id: transaction.id,
-        used: transaction.used,
+        redeemed: transaction.redeemed, // Return the updated redeemed status
         customerId: transaction.customerId,
         voucherId: transaction.voucherId,
       },
@@ -84,6 +152,8 @@ export const updateVoucherTransactionStatus = async (req: Request, res: Response
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
 
 
 
@@ -129,7 +199,8 @@ export const getVoucherTransactions = async (req: Request, res: Response): Promi
       customerName: customerMap[transaction.customerId] || 'Unknown',
       purchaseDate: transaction.purchaseDate,
       expirationDate: transaction.voucher.expirationDate.toISOString(),
-      amountSpent: transaction.gems_spent,
+      amountSpent: transaction.voucher.discountedPrice,
+      gemSpent: transaction.gems_spent,
       redeemed: transaction.redeemed,
       used: transaction.used,
     }));
@@ -507,6 +578,13 @@ export const createOutletSubscription = async (
     }
 
     const business = businessAccount.business;
+    businessAccount.gem_balance -= total_gem;
+    const businessTransaction = Business_transaction.create({
+      gems_deducted: total_gem,
+      business_account: businessAccount,
+    });
+    await businessTransaction.save();
+    await businessAccount.save();
 
     const activationDate = new Date();
 
@@ -631,7 +709,7 @@ export const checkExpiringSubscription = async (): Promise<void> => {
   }
 }
 
-cron.schedule('*/10 * * * * *', async () => {
+cron.schedule('*/20 * * * * *', async () => {
   console.log('Running automatic subscription renewal job...');
 
   try {
@@ -803,7 +881,8 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     const existingSubscription = await BusinessAccountSubscription.findOne({
       where: {
         business_register_business: businessAccount.business,
-        outlet: outlet_id || null // Match outlet_id or main subscription (null)
+        outlet: outlet_id || null, // Match outlet_id or main subscription (null)
+        status: 'active' // Only renew active subscriptions
       },
       relations: ['business_register_business']
     });
@@ -822,13 +901,21 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     console.log('Found existing subscription:', existingSubscription);
 
     const currentDate = new Date();
-    const newExpirationDate = new Date(existingSubscription.expiration_date);
+    let newExpirationDate = new Date(existingSubscription.expiration_date);
 
-    // Extend subscription expiration date by adding the duration
+    // If the current date is after the expiration date, start from current date
+    if (currentDate > newExpirationDate) {
+      newExpirationDate = new Date(currentDate);
+    }
+
+    // Extend by the subscription duration
     newExpirationDate.setMonth(newExpirationDate.getMonth() + duration);
+
+    console.log('New expiration date calculated:', newExpirationDate);
 
     // Deduct the total gem cost from the gem balance
     businessAccount.gem_balance -= total_gem;
+
     await businessAccount.save();
 
     existingSubscription.activation_date = currentDate;
@@ -837,14 +924,16 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     existingSubscription.distance_coverage = distance_coverage;
     existingSubscription.total_gem = total_gem;
 
+    console.log('Saving updated subscription:', existingSubscription); // Log updated subscription before saving
     await existingSubscription.save();
-
     console.log('Subscription successfully renewed:', existingSubscription);
+    const savedSubscription = await existingSubscription.save();
+    console.log('Subscription saved in DB:', savedSubscription); // Check if the updated object is being persisted
 
     res.status(200).json({
       status: 200,
       message: "Subscription successfully renewed",
-      subscription: existingSubscription,
+      subscription: existingSubscription, // Include this to return updated data to the frontend
     });
   } catch (error) {
     console.error("Error renewing subscription:", error);
@@ -855,6 +944,8 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     });
   }
 };
+
+
 
 
 export const viewSubscription = async (
@@ -1173,6 +1264,9 @@ export const retrieveProfile = async (
       return;
     }
 
+    // Filter out deleted outlets
+    const activeOutlets = businessAccount.outlets.filter(outlet => !outlet.isDeleted);
+
     res.json({
       status: 200,
       business: {
@@ -1187,7 +1281,7 @@ export const retrieveProfile = async (
         banRemarks: businessAccount.banRemarks,
         transactions: businessAccount.transactions
       },
-      outlets: businessAccount.outlets,
+      outlets: activeOutlets,
       registeredBusiness: businessAccount.business,
     });
   } catch (error) {
@@ -1321,11 +1415,10 @@ export const registerBusiness = async (
       entityName,
       location,
       category,
-      //username,
     } = req.body;
     console.log("Request body: ", req.body);
     console.log("Request file: ", req.file);
-    //console.log(req.body.username);
+
     const isUsernameAlreadyInUse = await Business_register_business.findOneBy({
       entityName,
     });
@@ -1335,6 +1428,7 @@ export const registerBusiness = async (
         status: 400,
         message: "Business EntityName already in use",
       });
+      return; // Add this to prevent further execution
     }
 
     // Check if req.file is defined
@@ -1343,7 +1437,7 @@ export const registerBusiness = async (
         status: 400,
         message: "Proof file (image or PDF) is required",
       });
-      return; // Exit the function early if no file is provided
+      return; // Add this to prevent further execution
     }
 
     const businessAccount = await Business_account.findOneBy({ username });
@@ -1352,18 +1446,17 @@ export const registerBusiness = async (
         status: 400,
         message: "Business Account not found",
       });
-      return;
+      return; // Add this to prevent further execution
     }
 
     const registeredBusiness = Business_register_business.create({
       entityName,
       location,
       category,
-      //proof: req.file.path, // store the file path or URL.
-      proof: `uploads/proofOfBusiness/${req.file.filename}`, // store relative path
+      proof: `uploads/proofOfBusiness/${req.file.filename}`,
       status: "pending",
       remarks: "",
-      business_account: businessAccount, // Link the business_account entity to business_register_business
+      business_account: businessAccount,
     });
 
     await registeredBusiness.save();
@@ -1507,7 +1600,12 @@ export const retrieveOutlet = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
+    const outlet = await Outlet.findOne({
+      where: {
+        outlet_id: outletIdNum,
+        isDeleted: false // Only retrieve non-deleted outlets
+      }
+    });
     if (!outlet) {
       res.status(404).json({ message: 'Outlet not found' });
       return;
@@ -1554,44 +1652,50 @@ export const retrieveOutletsByRegistrationId = async (req: Request, res: Respons
 export const editOutlet = async (req: Request, res: Response): Promise<void> => {
   try {
     const { outlet_id } = req.params;
-    const updatedData = req.body; // Ensure you're sending the correct fields from the frontend
-    console.log('EditOutlet - Updated data:', updatedData);
+    const updatedData = req.body;
+    //console.log('EditOutlet - Updated data:', updatedData);
     const outletIdNum = parseInt(outlet_id, 10);
     if (isNaN(outletIdNum)) {
       res.status(400).json({ message: 'Invalid outlet_id' });
       return;
     }
 
-    const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
+    const outlet = await Outlet.findOne({
+      where: {
+        outlet_id: outletIdNum,
+        isDeleted: false // Only edit non-deleted outlets
+      }
+    });
     if (!outlet) {
-      res.status(404).json({ message: 'outlet not found' });
+      res.status(404).json({ message: 'Outlet not found' });
       return;
     }
 
-    // Update voucher fields based on the provided data
-    outlet.outlet_name = updatedData.name;
+    // Update outlet fields based on the provided data
+    outlet.outlet_name = updatedData.outlet_name;
     outlet.location = updatedData.location;
     outlet.description = updatedData.description;
     outlet.contact = updatedData.contact;
 
     await outlet.save();
 
-    res.status(200).json({ message: 'Outlet updated successfully', voucher: outlet });
+    res.status(200).json({ message: 'Outlet updated successfully', outlet: outlet });
   } catch (error) {
     console.error('Error updating outlet:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
-
 }
-
 export const deleteOutlet = async (req: Request, res: Response): Promise<void> => {
-
   try {
     const { outlet_id } = req.params;
     const userId = (req as any).user.id;
 
     const outletID = parseInt(outlet_id);
-    const outlet = await Outlet.findOneBy({ outlet_id: outletID });
+    const outlet = await Outlet.findOne({
+      where: { outlet_id: outletID },
+      relations: ['business_account_subscription', 'vouchers', 'items']
+    });
+
     if (!outlet) {
       res.status(404).json({
         status: 404,
@@ -1600,10 +1704,37 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    await outlet.remove(); // delete the outlet
+    // Soft delete the outlet
+    outlet.isDeleted = true;
+    await outlet.save();
+
+    // Soft delete related subscriptions
+    if (outlet.business_account_subscription && outlet.business_account_subscription.length > 0) {
+      await Promise.all(outlet.business_account_subscription.map(async (subscription) => {
+        subscription.status = "deleted";
+        await subscription.save();
+      }));
+    }
+
+    // Soft delete related vouchers
+    if (outlet.vouchers && outlet.vouchers.length > 0) {
+      await Promise.all(outlet.vouchers.map(async (voucher) => {
+        voucher.isDeleted = true;
+        await voucher.save();
+      }));
+    }
+
+    // // Remove association between outlet and items
+    // if (outlet.items && outlet.items.length > 0) {
+    //   await Promise.all(outlet.items.map(async (item) => {
+    //     item.outlet = null;
+    //     await item.save();
+    //   }));
+    // }
+
     res.json({
       status: 200,
-      message: 'Outlet deleted successfully',
+      message: 'Outlet deleted successfully, related subscriptions marked as deleted and associations removed',
     });
   } catch (error) {
     console.error('Error deleting outlet:', error);
@@ -1612,12 +1743,14 @@ export const deleteOutlet = async (req: Request, res: Response): Promise<void> =
       message: 'Internal Server Error',
     });
   }
-
 }
 
 export const createVoucher = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, description, price, discount, duration, business_id, outlet_id, reward_item_id } = req.body;
+    const { name, description, price, discount, duration,
+      business_id, outlet_id,
+      enableGroupPurchase, groupSize, groupDiscount
+    } = req.body;
     const username = (req as any).user.username;
 
     const businessAccount = await Business_account.findOne({ where: { username }, relations: ['business', 'outlets'] });
@@ -1632,7 +1765,7 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
         status: 400,
         message: 'Voucher image is required'
       });
-      return;
+      return; // Exit the function early if no file is provided
     }
 
     // Create a new voucher listing
@@ -1643,6 +1776,9 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
       discount,
       duration,
       voucherImage: `uploads/vouchers/${req.file.filename}`, // store relative path
+      groupPurchaseEnabled: enableGroupPurchase,
+      groupSize,
+      groupDiscount,
     });
 
     // If business_id is provided, associate with main business
@@ -1665,16 +1801,6 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
       newVoucher.outlet = outlet;
     }
 
-    // If reward_item_id is provided, associate with reward item
-    if (reward_item_id) {
-      const rewardItem = await Item.findOne({ where: { id: reward_item_id } });
-      if (!rewardItem) {
-        res.status(404).json({ message: 'Reward item not found' });
-        return;
-      }
-      newVoucher.rewardItem = rewardItem;
-    }
-
     // Save the voucher
     await newVoucher.save();
     res.status(201).json({ message: 'Voucher created successfully', voucher: newVoucher });
@@ -1688,11 +1814,10 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
 export const getAllVoucher = async (req: Request, res: Response): Promise<void> => {
   try {
     const { registration_id, outlet_id, searchTerm } = req.query;
+    //console.log('Received registration_id:', registration_id);
+    //console.log('Received outlet_id:', outlet_id);
     let vouchers;
-    const query = Business_voucher.createQueryBuilder('voucher')
-      .leftJoinAndSelect('voucher.rewardItem', 'rewardItem')
-      .leftJoinAndSelect('voucher.business_register_business', 'business')
-      .leftJoinAndSelect('voucher.outlet', 'outlet');
+    const query = Business_voucher.createQueryBuilder('voucher');
 
     // Apply search term if present
     if (searchTerm) {
@@ -1703,24 +1828,45 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
 
     if (registration_id) {
       // Fetch vouchers for the main business
+      // Convert business_id to a number
       const registrationIdNum = parseInt(registration_id as string, 10);
       if (isNaN(registrationIdNum)) {
         res.status(400).json({ message: 'Invalid registration_id' });
         return;
       }
 
+      const business = await Business_register_business.findOne({ where: { registration_id: registrationIdNum } });
+      if (!business) {
+        res.status(404).json({ message: 'Business not found' });
+        return;
+      }
+      /*
+      vouchers = await Business_voucher.find({
+          where: { business_register_business: business, outlet: IsNull() },
+          relations: ['business_register_business']
+      });
+      */
+
       // Filter vouchers for the main business without an outlet
       query.andWhere('voucher.business_register_business = :registrationId', { registrationId: registrationIdNum });
-      query.andWhere('voucher.outlet IS NULL');
+      query.andWhere('voucher.outlet IS NULL'); // Ensure only vouchers without outlets are included
 
     } else if (outlet_id) {
       // Fetch vouchers for the specific outlet
+      // Convert outlet_id to a number
       const outletIdNum = parseInt(outlet_id as string, 10);
       if (isNaN(outletIdNum)) {
         res.status(400).json({ message: 'Invalid outlet_id' });
         return;
       }
-
+      const outlet = await Outlet.findOne({ where: { outlet_id: outletIdNum } });
+      if (!outlet) {
+        res.status(404).json({ message: 'Outlet not found' });
+        return;
+      }
+      /*
+      vouchers = await Business_voucher.find({ where: { outlet: outlet }, relations: ['outlet'] });
+      */
       // Filter vouchers for the specific outlet
       query.andWhere('voucher.outlet = :outletId', { outletId: outletIdNum });
 
@@ -1729,16 +1875,18 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    query.andWhere('voucher.isDeleted = :isDeleted', { isDeleted: false });
+
     // Fetch the vouchers
     vouchers = await query.getMany();
 
     // If no vouchers are found
     if (!vouchers || vouchers.length === 0) {
-      res.status(200).json({ message: 'No vouchers found', vouchers: [] });
+      res.status(200).json({ message: 'No vouchers found' });
       return;
     }
 
-    // Respond with the entire voucher objects, including all relations
+    // Respond with the vouchers
     res.status(200).json({ vouchers });
   } catch (error) {
     console.error('Error fetching vouchers:', error);
@@ -1746,7 +1894,10 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-export const getVoucher = async (req: Request, res: Response): Promise<void> => {
+export const getVoucher = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { listing_id } = req.params;
     console.log("Received listing_id:", listing_id);
@@ -1758,7 +1909,7 @@ export const getVoucher = async (req: Request, res: Response): Promise<void> => 
     }
 
     const voucher = await Business_voucher.findOne({
-      where: { listing_id: voucherIdNum },
+      where: { listing_id: voucherIdNum, isDeleted: false },
       relations: ["business_register_business", "outlet", "rewardItem"],
     });
 
@@ -1774,10 +1925,13 @@ export const getVoucher = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const editVoucher = async (req: Request, res: Response): Promise<void> => {
+export const editVoucher = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { listing_id } = req.params;
-    const updatedData = req.body;
+    const updatedData = req.body; // Ensure you're sending the correct fields from the frontend
 
     const voucherIdNum = parseInt(listing_id, 10);
     if (isNaN(voucherIdNum)) {
@@ -1786,7 +1940,7 @@ export const editVoucher = async (req: Request, res: Response): Promise<void> =>
     }
 
     const voucher = await Business_voucher.findOne({
-      where: { listing_id: voucherIdNum },
+      where: { listing_id: voucherIdNum, isDeleted: false },
       relations: ['rewardItem'],
     });
     if (!voucher) {
@@ -1800,19 +1954,6 @@ export const editVoucher = async (req: Request, res: Response): Promise<void> =>
     voucher.price = updatedData.price;
     voucher.discount = updatedData.discount;
     voucher.voucherImage = updatedData.voucherImage;
-
-    // Update reward item if provided, or unequip if null
-    if (updatedData.reward_item_id) {
-      const rewardItem = await Item.findOne({ where: { id: updatedData.reward_item_id } });
-      if (!rewardItem) {
-        res.status(404).json({ message: 'Reward item not found' });
-        return;
-      }
-      voucher.rewardItem = rewardItem;
-    } else {
-      // Unequip the reward item by setting it to null
-      voucher.rewardItem = null;
-    }
 
     await voucher.save();
 
@@ -1838,15 +1979,16 @@ export const deleteVoucher = async (
 
     // Find the voucher by listing_id
     const voucher = await Business_voucher.findOne({
-      where: { listing_id: voucherIdNum },
+      where: { listing_id: voucherIdNum, isDeleted: false },
     });
     if (!voucher) {
       res.status(404).json({ message: "Voucher not found" });
       return;
     }
 
-    // Delete the voucher
-    await voucher.remove();
+    // Soft delete the voucher
+    voucher.isDeleted = true;
+    await voucher.save();
 
     res.status(200).json({ message: "Voucher deleted successfully" });
   } catch (error) {
@@ -1883,6 +2025,8 @@ export const searchVouchers = async (
     if (outlet_id) {
       query.andWhere("voucher.outlet = :outlet_id", { outlet_id });
     }
+
+    query.andWhere("voucher.isDeleted = :isDeleted", { isDeleted: false });
 
     vouchers = await query.getMany();
 
@@ -1936,7 +2080,7 @@ export const deleteAccount = async (
         if (businessAccount.outlets && businessAccount.outlets.length > 0) {
             await Outlet.remove(businessAccount.outlets);
         }
-
+ 
         await Business_account.remove(businessAccount); // delete the business account itself
         console.log('Account deleted successfully');  // Log success
         */

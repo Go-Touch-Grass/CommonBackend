@@ -1,5 +1,5 @@
 import express from 'express';
-import { getUserStripeIdAndEphemeralKey, createPaymentIntent, deletePaymentMethodId, getPaymentMethod, getPaymentMethodId, getUserEmailandUsername, savePaymentMethodId } from '../controllers/payment';
+import { getUserStripeIdAndEphemeralKey, createPaymentIntent, deletePaymentMethodId, getPaymentMethod, getPaymentMethodId, getUserEmailandUsername, savePaymentMethodId, finalizeGroupPurchase } from '../controllers/payment';
 import { authMiddleware } from '../middleware/auth';
 import { UserRole } from '../entities/abstract/AbstractUser';
 
@@ -13,4 +13,5 @@ router.delete('/api/payment/delete-payment-method-id', authMiddleware([UserRole.
 router.get('/api/payment/get-payment-method', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), getPaymentMethod);
 router.get('/api/payment/get-user-stripe-id-and-ephemeral-key', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), getUserStripeIdAndEphemeralKey);
 
+router.post('/api/payment/group-purchase/finalize', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), finalizeGroupPurchase);
 export { router as paymentRouter };

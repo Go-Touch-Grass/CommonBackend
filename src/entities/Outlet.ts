@@ -48,6 +48,9 @@ export class Outlet extends BaseEntity {
     @Column({default: false})
     banStatus: boolean;
 
+    @Column({ default: false })
+    isDeleted: boolean;
+
     /*@ManyToOne(() => Business_register_business, business_register_business => business_register_business.outlets)
     @JoinColumn({
         name: "registration_id"

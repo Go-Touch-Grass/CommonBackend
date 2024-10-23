@@ -29,16 +29,16 @@ export class Item extends BaseEntity {
     @Column({ type: "enum", enum: statusEnum, default: statusEnum.APPROVED })
     status: statusEnum;
 
-    @Column({nullable: true})
+    @Column({ nullable: true })
     remarks: string;
-    
+
     @ManyToOne(() => Business_register_business, business => business.items, { nullable: true })
     @JoinColumn({ name: 'registration_id' })
     business_register_business: Business_register_business;
 
     @ManyToOne(() => Outlet, outlet => outlet.items, { nullable: true })
     @JoinColumn({ name: 'outlet_id' })
-    outlet: Outlet;
+    outlet: Outlet | null;
 
     @Column({ type: 'float', nullable: true })
     scale: number;

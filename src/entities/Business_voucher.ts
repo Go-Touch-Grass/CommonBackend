@@ -16,7 +16,9 @@ import { Business_register_business } from './Business_register_business';
 import { Outlet } from './Outlet';
 import { Customer_inventory } from "./Customer_inventory";
 import { Voucher_transaction } from "./Voucher_transaction";
+import { Customer_group_purchase } from "./Customer_group_purchase";
 import { Item } from './Item';
+import { Customer_voucher } from "./Customer_vouchers";
 
 @Entity('business_voucher')
 export class Business_voucher extends BaseEntity {
@@ -52,6 +54,16 @@ export class Business_voucher extends BaseEntity {
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, nullable: true })
     discountedPrice: number;
+
+    @Column({ type: 'boolean', default: false })
+    groupPurchaseEnabled: boolean; // Whether group purchase is enabled for this voucher
+
+    @Column({ type: 'int', nullable: true })
+    groupSize: number; // Minimum number of people for group purchase (optional)
+
+    @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+    groupDiscount: number; // Discount applied when group purchase conditions are met
+
 
     @BeforeInsert()
     async calculateFields() {
@@ -96,10 +108,19 @@ export class Business_voucher extends BaseEntity {
     customer_inventory: Customer_inventory[];
     */
 
+    @OneToMany(() => Customer_voucher, (customerVoucher) => customerVoucher.voucher)
+    voucherInstances: Customer_voucher[];
+
     @OneToMany(() => Voucher_transaction, transaction => transaction.voucher)
     transactions: Voucher_transaction[];
+
+    @OneToMany(() => Customer_group_purchase, groupPurchase => groupPurchase.voucher)
+    groupPurchases: Customer_group_purchase[];
 
     @ManyToOne(() => Item, { nullable: true })
     @JoinColumn({ name: 'reward_item_id' })
     rewardItem: Item | null;
+
+    @Column({ default: false })
+    isDeleted: boolean;
 }

@@ -29,7 +29,11 @@ import "./jobs/subscriptionReminderJob";
 import { Business_voucher } from "./entities/Business_voucher";
 import { Customer_inventory } from "./entities/Customer_inventory";
 import { Voucher_transaction } from "./entities/Voucher_transaction";
+
+import { Customer_group_purchase } from "./entities/Customer_group_purchase";
+import { Customer_group_participant } from "./entities/Customer_group_participant";
 import { customerInventoryRouter } from './routes/customer_inventory_router';
+import { Customer_voucher } from "./entities/Customer_vouchers";
 
 dotenv.config();
 
@@ -53,7 +57,10 @@ export const AppDataSource = new DataSource({
 		Avatar,
 		Customer_transaction,
 		Customer_inventory,
-		Voucher_transaction
+		Voucher_transaction,
+		Customer_voucher,
+		Customer_group_purchase,
+		Customer_group_participant,
 	],
 	synchronize: true,
 });
@@ -152,6 +159,37 @@ const main = async () => {
 					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/refs/heads/main/bottom/purple_pants.png",
 					approved: true,
 				},
+				{
+					name: "Light Base",
+					type: ItemType.BASE,
+					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/main/base/avatar_light.png",
+					approved: true,
+				},
+				{
+					name: "Tan Base 1",
+					type: ItemType.BASE,
+					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/main/base/avatar_tan_1.png",
+					approved: true,
+				},
+				{
+					name: "Tan Base 2",
+					type: ItemType.BASE,
+					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/main/base/avatar_tan_2.png",
+					approved: true,
+				},
+				{
+					name: "Tan Base 3",
+					type: ItemType.BASE,
+					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/main/base/avatar_tan_3.png",
+					approved: true,
+				},
+				{
+					name: "Tan Base 4",
+					type: ItemType.BASE,
+					filepath: "https://raw.githubusercontent.com/Go-Touch-Grass/sprites/main/base/avatar_tan_4.png",
+					approved: true,
+				},
+
 				{
 					name: "Nature Base",
 					type: ItemType.BASE,
