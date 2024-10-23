@@ -111,6 +111,7 @@ export const getAllBusinesses = async (req: Request, res: Response): Promise<voi
         res.status(200).json(businesses);
     } catch (error) {
         console.log(error);
+        
         res.status(500).json({
             status: 500,
             message: 'Failed to fetch businesses'
