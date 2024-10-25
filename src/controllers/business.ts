@@ -1,4 +1,3 @@
-
 import { Request, Response } from "express";
 import { Business_account } from "../entities/Business_account";
 import { Business_register_business } from "../entities/Business_register_business";
