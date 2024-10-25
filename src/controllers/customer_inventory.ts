@@ -104,7 +104,13 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
         // Fetch the Business Voucher
         const voucher = await Business_voucher.findOne({
             where: { listing_id: voucherId },
-            relations: ['business_register_business', 'outlet', 'rewardItem']
+            relations: [
+                'business_register_business',
+                'business_register_business.business_account', // Nested relation for business_account
+                'outlet',
+                'outlet.business', // Nested relation for outlet's business account
+                'rewardItem',
+            ]
         });
 
         if (!voucher) {
@@ -133,6 +139,19 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
         // Deduct the total cost from the customer's gem balance
         customer.gem_balance -= totalCost;
         await customer.save();
+
+        // Add the total cost to the business's gem balance
+        if (voucher.business_register_business) {
+            const businessRegisterBusiness = voucher.business_register_business;
+            const businessAccount = businessRegisterBusiness.business_account;
+            businessAccount.gem_balance += totalCost;
+            await businessAccount.save();
+        } else if (voucher.outlet) {
+            const outlet = voucher.outlet;
+            const businessAccount = outlet.business;
+            businessAccount.gem_balance += totalCost;
+            await businessAccount.save();
+        }        
 
         // Fetch or create the customer's inventory
         let inventory = await Customer_inventory.findOne({
