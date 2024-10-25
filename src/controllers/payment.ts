@@ -26,7 +26,15 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
     // Fetch group purchase and ensure it's completed
     const groupPurchase = await Customer_group_purchase.findOne({
       where: { id: Number(group_purchase_id) },
-      relations: ["participants", "participants.customer", "voucher"],
+      relations: [
+        "participants",
+        "participants.customer",
+        "voucher",
+        "voucher.business_register_business",
+        "voucher.business_register_business.business_account",
+        "voucher.outlet",
+        "voucher.outlet.business",
+      ],
     });
 
     if (!groupPurchase || groupPurchase.groupStatus !== "completed") {
@@ -75,6 +83,20 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
       });
     }
 
+    let businessAccount: Business_account | undefined;
+    if (groupPurchase.voucher.business_register_business) {
+      const businessRegisterBusiness = groupPurchase.voucher.business_register_business;
+      businessAccount = businessRegisterBusiness.business_account;
+    } else if (groupPurchase.voucher.outlet) {
+      const outlet = groupPurchase.voucher.outlet;
+      businessAccount = outlet.business;
+    }
+
+    // Check if businessAccount is assigned
+    if (!businessAccount) {
+      return res.status(400).json({ message: "Associated business account not found" });
+}
+
     // Process payments for all participants if all have sufficient gems
     let allPaymentsSuccessful = true;
     // Iterate over each participant and charge gems
@@ -89,6 +111,10 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
         // Deduct the required gems from the customer's gem balance
         customer.gem_balance -= finalPriceInGems;
         await customer.save();
+
+        // Increment the business's gem balance
+        businessAccount.gem_balance += finalPriceInGems;
+        await businessAccount.save();
 
         // Update participant's payment status and record the payment completion time
         participant.payment_status = 'paid';
