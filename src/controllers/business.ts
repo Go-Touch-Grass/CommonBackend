@@ -1748,7 +1748,7 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
   try {
     const { name, description, price, discount, duration,
       business_id, outlet_id,
-      enableGroupPurchase, groupSize, groupDiscount
+      enableGroupPurchase, groupSize, groupDiscount, reward_item_id
     } = req.body;
     const username = (req as any).user.username;
 
@@ -1800,6 +1800,16 @@ export const createVoucher = async (req: Request, res: Response): Promise<void> 
       newVoucher.outlet = outlet;
     }
 
+    // If reward_item_id is provided, associate with reward item
+    if (reward_item_id) {
+      const rewardItem = await Item.findOne({ where: { id: reward_item_id } });
+      if (!rewardItem) {
+        res.status(404).json({ message: 'Reward item not found' });
+        return;
+      }
+      newVoucher.rewardItem = rewardItem;
+    }
+
     // Save the voucher
     await newVoucher.save();
     res.status(201).json({ message: 'Voucher created successfully', voucher: newVoucher });
@@ -1816,7 +1826,10 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
     //console.log('Received registration_id:', registration_id);
     //console.log('Received outlet_id:', outlet_id);
     let vouchers;
-    const query = Business_voucher.createQueryBuilder('voucher');
+    const query = Business_voucher.createQueryBuilder('voucher')
+      .leftJoinAndSelect('voucher.rewardItem', 'rewardItem')
+      .leftJoinAndSelect('voucher.business_register_business', 'business')
+      .leftJoinAndSelect('voucher.outlet', 'outlet');
 
     // Apply search term if present
     if (searchTerm) {
@@ -1881,7 +1894,7 @@ export const getAllVoucher = async (req: Request, res: Response): Promise<void> 
 
     // If no vouchers are found
     if (!vouchers || vouchers.length === 0) {
-      res.status(200).json({ message: 'No vouchers found' });
+      res.status(200).json({ message: 'No vouchers found', vouchers: [] });
       return;
     }
 
@@ -1953,6 +1966,20 @@ export const editVoucher = async (
     voucher.price = updatedData.price;
     voucher.discount = updatedData.discount;
     voucher.voucherImage = updatedData.voucherImage;
+
+
+    // Update reward item if provided, or unequip if null
+    if (updatedData.reward_item_id) {
+      const rewardItem = await Item.findOne({ where: { id: updatedData.reward_item_id } });
+      if (!rewardItem) {
+        res.status(404).json({ message: 'Reward item not found' });
+        return;
+      }
+      voucher.rewardItem = rewardItem;
+    } else {
+      // Unequip the reward item by setting it to null
+      voucher.rewardItem = null;
+    }
 
     await voucher.save();
 
