@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { checkExpiringSubscription } from "../controllers/business"; // Adjust the import to your folder structure
+import { checkExpiringSubscription } from "../controllers/business.controller"; // Adjust the import to your folder structure
 
 // Schedule the job to run once a day at 9 AM. 0 9 * * * from https://www.npmjs.com/package/node-cron
 // * * * * *: checks every minute for demo

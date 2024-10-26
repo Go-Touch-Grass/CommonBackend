@@ -1,0 +1,16 @@
+import { Column, Entity } from "typeorm";
+import { AbstractUser } from "./abstractUser.entity";
+
+@Entity()
+export abstract class AbstractStripeUser extends AbstractUser {
+    @Column({
+        unique: true
+    })
+    email: string;
+
+    @Column({ nullable: true })
+    stripeId: string;
+
+    @Column({ nullable: true, type: 'varchar' })
+    paymentMethodId: string | null;
+}
