@@ -1186,3 +1186,66 @@ export const getAllValidSubscription = async (req: Request, res: Response) => {
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+export const updateCustomerXP = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user.id;
+        const { xpAmount } = req.body;
+
+        // Validate XP amount
+        if (!xpAmount || typeof xpAmount !== 'number' || xpAmount <= 0) {
+            res.status(400).json({
+                status: 400,
+                message: "Invalid XP amount",
+            });
+            return;
+        }
+
+        const customer_account = await Customer_account.findOne({
+            where: { id: userId },
+        });
+
+        if (!customer_account) {
+            res.status(404).json({
+                status: 404,
+                message: "User not found",
+            });
+            return;
+        }
+
+        // Calculate current level before XP update
+        const previousLevel = calculateLevel(customer_account.exp);
+
+        // Update XP
+        customer_account.exp += xpAmount;
+        await customer_account.save();
+
+        // Calculate new level after XP update
+        const currentLevel = calculateLevel(customer_account.exp);
+        const xpForCurrentLevel = calculateTotalXpForLevel(currentLevel);
+        const xpForNextLevel = calculateTotalXpForLevel(currentLevel + 1) - xpForCurrentLevel;
+
+        // Prepare response data
+        const responseData = {
+            previousLevel,
+            currentLevel,
+            totalXP: customer_account.exp,
+            xpForNextLevel,
+            xpProgress: customer_account.exp - xpForCurrentLevel,
+            leveledUp: currentLevel > previousLevel
+        };
+
+        res.status(200).json({
+            status: 200,
+            message: "XP updated successfully",
+            data: responseData
+        });
+
+    } catch (error) {
+        console.error("Error updating XP:", error);
+        res.status(500).json({
+            status: 500,
+            message: "Internal server error",
+        });
+    }
+};

@@ -19,6 +19,7 @@ import {
     getAllVouchersForCustomers,
     getAllCreatedGroups,
     getAllJoinedGroups,
+    updateCustomerXP,
 } from "../controllers/customerAccount.controller";
 import { UserRole } from '../entities/abstract/abstractUser.entity';
 
@@ -47,5 +48,7 @@ router.get('/auth/group-purchase/getAllJoinedGroups', authMiddleware([UserRole.C
 router.post('/auth/verify-topUp', authMiddleware([UserRole.CUSTOMER]), verifyTopUpCustomer);
 
 router.get('/auth/subscription', authMiddleware([UserRole.CUSTOMER]), getAllValidSubscription);
+
+router.post("/auth/update-xp", authMiddleware([UserRole.CUSTOMER]), updateCustomerXP);
 
 export { router as customerAccountRouter };
