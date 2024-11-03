@@ -13,6 +13,7 @@ import { Voucher_transaction } from "../entities/Voucher_transaction";
 import { Customer_group_purchase } from "../entities/Customer_group_purchase";
 import { Customer_group_participant } from "../entities/Customer_group_participant";
 import { MoreThan } from "typeorm";
+import { Streak } from "../entities/Streak";
 
 
 
@@ -613,6 +614,14 @@ export const registerCustomer = async (
 
         await customer_inventory.save();
 
+        const streak = Streak.create({
+            streakCount: 0,
+            lastCheckIn: null as Date | null,  // Explicitly set `null` for lastCheckIn
+            xpReward: 0,
+            customer: customer_account, // Corrected to `customer`
+        });
+
+        await streak.save();
 
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET is not defined");
@@ -715,6 +724,91 @@ export const resendOTP = async (req: Request, res: Response): Promise<void> => {
 
 
 
+const updateStreak = async (customerId: number) => {
+    // Fetch the customer's account and streak information from the database
+    const query = Customer_account.createQueryBuilder('customer')
+        .leftJoinAndSelect('customer.streak', 'streak')
+        .where('customer.id = :id', { id: customerId });
+
+    console.log(query.getQuery()); // Log the query for debugging
+    const customer = await query.getOne();
+
+    if (!customer) {
+        throw new Error('Customer not found');
+    }
+
+
+    // Ensure `customer.exp` is initialized to avoid undefined behavior
+    customer.exp = customer.exp ?? 0;
+
+    const today = new Date();
+    const lastLoginDate = customer.lastLogin ? new Date(customer.lastLogin) : null;
+
+    // Initialize the new streak count and XP reward
+    let newStreakCount = customer.streak?.streakCount || 0;
+    let xpReward = 0; // Start with 0 XP reward by default
+
+    if (!lastLoginDate) {
+        // If there's no last login, initialize streak and set initial XP
+        newStreakCount = 1;
+        xpReward = 10; // Initial XP for the first login
+    } else {
+        const lastLoginDateString = lastLoginDate.toISOString().split('T')[0];
+        const todayString = today.toISOString().split('T')[0];
+
+        if (lastLoginDateString !== todayString) {
+            const diffTime = Math.abs(today.getTime() - lastLoginDate.getTime());
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) {
+                // Consecutive day login: increase streak and XP
+                newStreakCount += 1;
+                xpReward = Math.min(newStreakCount * 10, 50); // Cap XP at 50 for consecutive streaks
+            } else {
+                // Non-consecutive login: reset streak to 1 and set XP to 10
+                newStreakCount = 1;
+                xpReward = 10;
+            }
+        } else {
+            // If already logged in today, return without modifying `exp`
+            return {
+                streakCount: newStreakCount,
+                lastLogin: lastLoginDate.toISOString(),
+                xpReward: 0, // No XP reward for multiple logins on the same day
+            };
+        }
+    }
+
+    // Accumulate XP only if there's an XP reward to be added
+    if (xpReward > 0) {
+        customer.exp += xpReward;
+        customer.lastLogin = today; // Update lastLogin to today's date after rewarding XP
+        await customer.save(); // Save the updated customer account with new XP
+    }
+
+    // Update the streak entity only if streak has changed
+    if (customer.streak) {
+        console.log("Updating streak for customer:", customerId);
+        customer.streak.lastCheckIn = today;
+        customer.streak.streakCount = newStreakCount;
+        await customer.streak.save(); // Save the updated streak
+        console.log("Streak updated:", {
+            lastCheckIn: customer.streak.lastCheckIn,
+            streakCount: customer.streak.streakCount,
+        });
+    }
+
+    return {
+        streakCount: newStreakCount,
+        lastLogin: today.toISOString(),
+        xpReward: xpReward, // Return the XP rewarded for this login
+    };
+};
+
+export default updateStreak; // Export the function for use in other parts of your application
+
+
+
 export const loginCustomer = async (
     req: Request,
     res: Response
@@ -754,6 +848,18 @@ export const loginCustomer = async (
 
         const isEmailVerified = !customer_account.otp; // If OTP is null or empty, the email is verified
 
+        const streakData = await updateStreak(customer_account.id); // Call the streak update function
+        console.log("Streak Data after update:", streakData); // Debugging log
+
+        customer_account.lastLogin = new Date();
+
+        if (streakData.xpReward > 0) {
+            customer_account.exp += streakData.xpReward;
+        }
+
+        await customer_account.save(); // Save the updated last login date and exp
+
+
         const token = jwt.sign(
             {
                 id: customer_account.id,
@@ -768,6 +874,9 @@ export const loginCustomer = async (
             customer_account,
             token,
             isEmailVerified,//send the verification status to frontend.
+            streakCount: streakData.streakCount, // include streak count in the response
+            lastCheckIn: streakData.lastLogin, // include last check-in date in the response
+
         });
     } catch (error) {
         console.error(error);
@@ -787,6 +896,7 @@ export const getUserInfo = async (
         const customer_account = await Customer_account.findOne({
             where: { id: userId },
             select: ["id", "fullName", "username", "email", "exp", "gem_balance"],
+            relations: ["streak"],
         });
 
         if (!customer_account) {
@@ -804,11 +914,17 @@ export const getUserInfo = async (
         const xpForNextLevel =
             calculateTotalXpForLevel(currentLevel + 1) - xpForCurrentLevel;
 
+        const streakCount = customer_account.streak?.streakCount || 0; // Default to 0 if no streak
+        const lastCheckIn = customer_account.streak?.lastCheckIn || null; // Default to null if no check-in
+        console.log(streakCount);
+        console.log("check" + lastCheckIn);
         res.json({
             ...customer_account,
             currentLevel,
             xpForNextLevel,
             xpProgress: customer_account.exp - xpForCurrentLevel,
+            streakCount, // Include streak count
+            lastCheckIn, // Include last check-in date
         });
     } catch (error) {
         console.error(error);

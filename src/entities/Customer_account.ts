@@ -18,6 +18,7 @@ import { Item } from "./Item";
 import { Customer_inventory } from "./Customer_inventory";
 import { Customer_group_participant } from "./Customer_group_participant";
 import { Customer_group_purchase } from "./Customer_group_purchase";
+import { Streak } from "./Streak";
 
 @Entity("customer_account")
 export class Customer_account extends AbstractStripeUser {
@@ -155,4 +156,11 @@ export class Customer_account extends AbstractStripeUser {
 	@OneToMany(() => Customer_group_participant, participant => participant.customer)
 	participants: Customer_group_participant[];
 
+
+	@Column({ type: 'timestamp', nullable: true })
+	lastLogin: Date | null;
+
+	@OneToOne(() => Streak, (streak) => streak.customer, { eager: true })
+	@JoinColumn() // This will create the foreign key in the Streak table
+	streak: Streak;
 }

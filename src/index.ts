@@ -34,6 +34,7 @@ import { Customer_group_purchase } from "./entities/Customer_group_purchase";
 import { Customer_group_participant } from "./entities/Customer_group_participant";
 import { customerInventoryRouter } from './routes/customer_inventory_router';
 import { Customer_voucher } from "./entities/Customer_vouchers";
+import { Streak } from "./entities/Streak";
 
 dotenv.config();
 
@@ -61,6 +62,7 @@ export const AppDataSource = new DataSource({
 		Customer_voucher,
 		Customer_group_purchase,
 		Customer_group_participant,
+		Streak
 	],
 	synchronize: true,
 });
