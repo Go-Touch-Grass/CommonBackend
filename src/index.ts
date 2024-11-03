@@ -2,33 +2,33 @@ import { DataSource } from "typeorm";
 import * as dotenv from "dotenv";
 import express from "express";
 import path from "path";
-import { Admin } from "./entities/Admin";
+import { Admin } from "./entities/admin.entity";
 import bcrypt from "bcrypt";
 
-import { Customer_account } from "./entities/Customer_account";
-import { adminRouter } from "./routes/admin";
+import { Customer_account } from "./entities/customerAccount.entity";
+import { adminRouter } from "./routes/admin.routes";
 
-import { customerAccountRouter } from "./routes/customer_account_router";
-import { Business_register_business } from "./entities/Business_register_business";
+import { customerAccountRouter } from "./routes/customerAccount.routes";
+import { Business_register_business } from "./entities/businessRegisterBusiness.entity";
 
-import { Outlet } from "./entities/Outlet";
-import { Business_account } from "./entities/Business_account"; // Add this line
-import { businessRouter } from "./routes/business";
-import { BusinessAccountSubscription } from "./entities/Business_account_subscription";
+import { Outlet } from "./entities/outlet.entity";
+import { Business_account } from "./entities/businessAccount.entity"; // Add this line
+import { businessRouter } from "./routes/business.routes";
+import { BusinessAccountSubscription } from "./entities/businessAccountSubscription.entity";
 import Stripe from "stripe";
-import { paymentRouter } from "./routes/payment";
-import { Business_transaction } from "./entities/Business_transaction";
-import { Item, ItemType } from "./entities/Item";
-import { Avatar } from "./entities/Avatar";
-import { itemRouter } from "./routes/item_router";
-import { avatarRouter } from "./routes/avatar_router";
-import { Customer_transaction } from "./entities/Customer_transaction";
-import { customerSocialRouter } from "./routes/customer_social_router";
+import { paymentRouter } from "./routes/payment.routes";
+import { Business_transaction } from "./entities/businessTransaction.entity";
+import { Item, ItemType } from "./entities/item.entity";
+import { Avatar } from "./entities/avatar.entity";
+import { itemRouter } from "./routes/item.routes";
+import { avatarRouter } from "./routes/avatar.routes";
+import { Customer_transaction } from "./entities/customerTransaction.entity";
+import { customerSocialRouter } from "./routes/customerSocial.routes";
 import "./jobs/subscriptionReminderJob";
 
-import { Business_voucher } from "./entities/Business_voucher";
-import { Customer_inventory } from "./entities/Customer_inventory";
-import { Voucher_transaction } from "./entities/Voucher_transaction";
+import { Business_voucher } from "./entities/businessVoucher.entity";
+import { Customer_inventory } from "./entities/customerInventory.entity";
+import { Voucher_transaction } from "./entities/voucherTransaction.entity";
 
 import { Customer_group_purchase } from "./entities/Customer_group_purchase";
 import { Customer_group_participant } from "./entities/Customer_group_participant";
