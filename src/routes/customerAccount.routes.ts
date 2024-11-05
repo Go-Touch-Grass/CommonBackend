@@ -20,6 +20,7 @@ import {
     getAllCreatedGroups,
     getAllJoinedGroups,
     updateCustomerXP,
+    repairStreak,
 } from "../controllers/customerAccount.controller";
 import { UserRole } from '../entities/abstract/abstractUser.entity';
 
@@ -51,4 +52,5 @@ router.get('/auth/subscription', authMiddleware([UserRole.CUSTOMER]), getAllVali
 
 router.post("/auth/update-xp", authMiddleware([UserRole.CUSTOMER]), updateCustomerXP);
 
+router.post("/auth/customers/:customerId/repair-streak", authMiddleware([UserRole.CUSTOMER]), repairStreak);
 export { router as customerAccountRouter };

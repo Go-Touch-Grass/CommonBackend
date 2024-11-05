@@ -615,7 +615,8 @@ export const registerCustomer = async (
         await customer_inventory.save();
 
         const streak = Streak.create({
-            streakCount: 0,
+            streakCount: 1,
+            maxStreakCount: 1,
             lastCheckIn: null as Date | null,  // Explicitly set `null` for lastCheckIn
             xpReward: 0,
             customer: customer_account, // Corrected to `customer`
@@ -763,7 +764,10 @@ const updateStreak = async (customerId: number) => {
             if (diffDays === 1) {
                 // Consecutive day login: increase streak and XP
                 newStreakCount += 1;
-                xpReward = Math.min(newStreakCount * 10, 50); // Cap XP at 50 for consecutive streaks
+                xpReward = Math.min(newStreakCount * 10, 50);
+                if (newStreakCount > customer.streak.maxStreakCount) {
+                    customer.streak.maxStreakCount = newStreakCount; // Update max streak count
+                }
             } else {
                 // Non-consecutive login: reset streak to 1 and set XP to 10
                 newStreakCount = 1;
@@ -800,6 +804,7 @@ const updateStreak = async (customerId: number) => {
 
     return {
         streakCount: newStreakCount,
+        maxStreakCount: customer.streak.maxStreakCount,
         lastLogin: today.toISOString(),
         xpReward: xpReward, // Return the XP rewarded for this login
     };
@@ -808,6 +813,53 @@ const updateStreak = async (customerId: number) => {
 export default updateStreak; // Export the function for use in other parts of your application
 
 
+
+export const repairStreak = async (req: Request, res: Response): Promise<Response<any>> => {
+    const userId = (req as any).user.id;
+
+    try {
+        const customer = await Customer_account.findOne({
+            where: { id: userId },
+            select: ["id", "fullName", "username", "email", "exp", "gem_balance"],
+            relations: ["streak"],
+        });
+
+        if (!customer || !customer.streak) {
+            return res.status(404).json({ error: "Customer or streak data not found." });
+        }
+
+        // Check if the streak is broken
+        if (customer.streak.streakCount > 1) {
+            return res.status(400).json({ error: "Your streak is still active. No repair needed." });
+        }
+
+        const baseCost = 10; // Base gem cost for streak repair
+        const gemsRequired = baseCost * customer.streak.maxStreakCount; // Cost scales with max streak count
+
+        if (customer.gem_balance < gemsRequired) {
+            return res.status(400).json({ error: "Insufficient gems to repair streak." });
+        }
+
+        // Deduct gems and restore streak
+        customer.gem_balance -= gemsRequired;
+        customer.streak.streakCount = customer.streak.maxStreakCount; // Restore to max streak count
+        await customer.save();
+        await customer.streak.save();
+
+        // Send the response back to the client
+        return res.status(200).json({
+            message: "Streak restored successfully.",
+            gem_balance: customer.gem_balance,
+            streakCount: customer.streak.streakCount,
+            gemsRequired,
+        });
+
+    } catch (error) {
+        // Handle unexpected errors
+        console.error(error); // Log the error for debugging
+        return res.status(500).json({ error: "An unexpected error occurred while repairing the streak." });
+    }
+};
 
 export const loginCustomer = async (
     req: Request,
@@ -875,6 +927,7 @@ export const loginCustomer = async (
             token,
             isEmailVerified,//send the verification status to frontend.
             streakCount: streakData.streakCount, // include streak count in the response
+            maxStreakCount: customer_account.streak.maxStreakCount, // Add max streak count
             lastCheckIn: streakData.lastLogin, // include last check-in date in the response
 
         });

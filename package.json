@@ -26,6 +26,7 @@
     "node-pre-gyp": "^0.17.0",
     "nodemailer": "^6.9.15",
     "pg": "^8.12.0",
+    "react-native-vector-icons": "^10.2.0",
     "stripe": "^16.12.0",
     "ts-node": "^10.9.2",
     "type": "^2.7.3",

@@ -10,14 +10,14 @@ import {
 	ManyToMany,
 	JoinTable
 } from "typeorm";
-import { UserRole } from "./abstract/AbstractUser";
-import { Avatar } from "./Avatar";
-import { Customer_transaction } from "./Customer_transaction";
-import { AbstractStripeUser } from "./abstract/AbstractStripeUser";
-import { Item } from "./Item";
-import { Customer_inventory } from "./Customer_inventory";
-import { Customer_group_participant } from "./Customer_group_participant";
-import { Customer_group_purchase } from "./Customer_group_purchase";
+import { UserRole } from "./abstract/abstractUser.entity";
+import { Avatar } from "./avatar.entity";
+import { Customer_transaction } from "./customerTransaction.entity";
+import { AbstractStripeUser } from "./abstract/abstractStripeUser.entity";
+import { Item } from "./item.entity";
+import { Customer_inventory } from "./customerInventory.entity";
+import { Customer_group_participant } from "./customerGroupParticipant.entity";
+import { Customer_group_purchase } from "./customerGroupPurchase.entity";
 import { Streak } from "./Streak";
 
 @Entity("customer_account")

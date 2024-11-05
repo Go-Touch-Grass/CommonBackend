@@ -30,10 +30,10 @@ import { Business_voucher } from "./entities/businessVoucher.entity";
 import { Customer_inventory } from "./entities/customerInventory.entity";
 import { Voucher_transaction } from "./entities/voucherTransaction.entity";
 
-import { Customer_group_purchase } from "./entities/Customer_group_purchase";
-import { Customer_group_participant } from "./entities/Customer_group_participant";
-import { customerInventoryRouter } from './routes/customer_inventory_router';
-import { Customer_voucher } from "./entities/Customer_vouchers";
+import { Customer_group_purchase } from "./entities/customerGroupPurchase.entity";
+import { Customer_group_participant } from "./entities/customerGroupParticipant.entity";
+import { customerInventoryRouter } from './routes/customerInventory.routes';
+import { Customer_voucher } from "./entities/customerVouchers.entity";
 import { Streak } from "./entities/Streak";
 
 dotenv.config();

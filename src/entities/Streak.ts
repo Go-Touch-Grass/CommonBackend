@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToOne, BaseEntity, JoinColumn } from 'typeorm';
-import { Customer_account } from './Customer_account';
+import { Customer_account } from './customerAccount.entity';
 
 @Entity()
 export class Streak extends BaseEntity {
@@ -8,6 +8,9 @@ export class Streak extends BaseEntity {
 
     @Column({ default: 0 })
     streakCount: number;
+
+    @Column({ default: 0 })
+    maxStreakCount: number;
 
     @Column({ type: 'timestamp', nullable: true })
     lastCheckIn: Date | null;
