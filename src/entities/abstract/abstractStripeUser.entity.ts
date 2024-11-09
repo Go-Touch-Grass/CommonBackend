@@ -9,7 +9,7 @@ export abstract class AbstractStripeUser extends AbstractUser {
     email: string;
 
     @Column({ nullable: true })
-    stripeId: string;
+    stripeCustomerId: string; // To identify user when they are paying us
 
     @Column({ nullable: true, type: 'varchar' })
     paymentMethodId: string | null;

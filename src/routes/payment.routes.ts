@@ -1,5 +1,5 @@
 import express from 'express';
-import { getUserStripeIdAndEphemeralKey, createPaymentIntent, deletePaymentMethodId, getPaymentMethod, getPaymentMethodId, getUserEmailandUsername, savePaymentMethodId, finalizeGroupPurchase } from '../controllers/payment.controller';
+import { getUserStripeIdAndEphemeralKey, createPaymentIntent, deletePaymentMethodId, getPaymentMethod, getPaymentMethodId, getUserEmailandUsername, savePaymentMethodId, finalizeGroupPurchase, getBusinessStripeAccountStatus, createBusinessOnboardingLink, cashout } from '../controllers/payment.controller';
 import { authMiddleware } from '../middleware/auth';
 import { UserRole } from '../entities/abstract/abstractUser.entity';
 
@@ -14,4 +14,9 @@ router.get('/api/payment/get-payment-method', authMiddleware([UserRole.BUSINESS,
 router.get('/api/payment/get-user-stripe-id-and-ephemeral-key', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), getUserStripeIdAndEphemeralKey);
 
 router.post('/api/payment/group-purchase/finalize', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), finalizeGroupPurchase);
+
+router.get('/api/payment/business-stripe-status', authMiddleware([UserRole.BUSINESS]), getBusinessStripeAccountStatus);
+router.post('/api/payment/create-business-onboarding-link', authMiddleware([UserRole.BUSINESS]), createBusinessOnboardingLink);
+router.post('/api/payment/cashout', authMiddleware([UserRole.BUSINESS]), cashout);
+
 export { router as paymentRouter };

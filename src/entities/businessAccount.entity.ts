@@ -78,4 +78,9 @@ export class Business_account extends AbstractStripeUser {
         nullable: true,
     })
     banRemarks: string; // reason for ban
+
+    @Column({
+        nullable: true,
+    })
+    stripeAccountId: string; // To identify user when we are paying them
 }
