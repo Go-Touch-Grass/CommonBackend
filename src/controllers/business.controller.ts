@@ -880,8 +880,8 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     const existingSubscription = await BusinessAccountSubscription.findOne({
       where: {
         business_register_business: businessAccount.business,
-        outlet: outlet_id || null, // Match outlet_id or main subscription (null)
-        status: 'active' // Only renew active subscriptions
+        outlet: outlet_id || null,
+        status: 'active'
       },
       relations: ['business_register_business']
     });
@@ -907,12 +907,12 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
       newExpirationDate = new Date(currentDate);
     }
 
-    // Extend by the subscription duration
+
     newExpirationDate.setMonth(newExpirationDate.getMonth() + duration);
 
     console.log('New expiration date calculated:', newExpirationDate);
 
-    // Deduct the total gem cost from the gem balance
+
     businessAccount.gem_balance -= total_gem;
 
     await businessAccount.save();
@@ -923,16 +923,16 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     existingSubscription.distance_coverage = distance_coverage;
     existingSubscription.total_gem = total_gem;
 
-    console.log('Saving updated subscription:', existingSubscription); // Log updated subscription before saving
+    console.log('Saving updated subscription:', existingSubscription);
     await existingSubscription.save();
     console.log('Subscription successfully renewed:', existingSubscription);
     const savedSubscription = await existingSubscription.save();
-    console.log('Subscription saved in DB:', savedSubscription); // Check if the updated object is being persisted
+    console.log('Subscription saved in DB:', savedSubscription);
 
     res.status(200).json({
       status: 200,
       message: "Subscription successfully renewed",
-      subscription: existingSubscription, // Include this to return updated data to the frontend
+      subscription: existingSubscription,
     });
   } catch (error) {
     console.error("Error renewing subscription:", error);
@@ -970,7 +970,7 @@ export const viewSubscription = async (
     const subscriptions = await BusinessAccountSubscription.find({
       where: {
         business_register_business: business,
-        status: "active", // Only get active subscriptions
+        status: "active",
       },
       relations: ["outlet"],
     });
