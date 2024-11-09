@@ -385,7 +385,7 @@ export const getBusinessStripeAccountStatus = async (req: Request, res: Response
 };
 
 export const createBusinessOnboardingLink = async (req: Request, res: Response): Promise<void> => {
-  const { businessId } = (req as any).user.id;
+  const businessId = (req as any).user.id;
   const business = await Business_account.findOne({ where: { business_id: businessId } });
 
   if (!business) {
@@ -425,7 +425,7 @@ export const createBusinessOnboardingLink = async (req: Request, res: Response):
 
 export const cashout = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { businessId } = (req as any).user.id;
+    const businessId = (req as any).user.id;
     const { amount } = req.body;
     const business = await Business_account.findOne({ where: { business_id: businessId } });
 
