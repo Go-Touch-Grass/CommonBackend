@@ -1,11 +1,12 @@
 import express from 'express';
-import { getUserStripeIdAndEphemeralKey, createPaymentIntent, deletePaymentMethodId, getPaymentMethod, getPaymentMethodId, getUserEmailandUsername, savePaymentMethodId, finalizeGroupPurchase, getBusinessStripeAccountStatus, createBusinessOnboardingLink, cashout } from '../controllers/payment.controller';
+import { getUserStripeIdAndEphemeralKey, createPaymentIntent, deletePaymentMethodId, getPaymentMethod, getPaymentMethodId, getUserEmailandUsername, savePaymentMethodId, finalizeGroupPurchase, getBusinessStripeAccountStatus, createBusinessOnboardingLink, cashout, createStripeSubscription } from '../controllers/payment.controller';
 import { authMiddleware } from '../middleware/auth';
 import { UserRole } from '../entities/abstract/abstractUser.entity';
 
 const router = express.Router();
 
 router.post('/api/payment/create-payment-intent', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), createPaymentIntent);
+router.post('/api/payment/create-stripe-subscription', authMiddleware([UserRole.BUSINESS]), createStripeSubscription);
 router.get('/api/payment/get-user-email-and-username', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), getUserEmailandUsername);
 router.post('/api/payment/save-payment-method-id', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), savePaymentMethodId);
 router.get('/api/payment/get-payment-method-id', authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), getPaymentMethodId);

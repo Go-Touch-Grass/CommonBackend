@@ -1,5 +1,8 @@
-import { DataSource } from "typeorm";
 import * as dotenv from "dotenv";
+
+dotenv.config(); // Ensure dotenv.config() is called before any other files are executed
+
+import { DataSource } from "typeorm";
 import express from "express";
 import path from "path";
 import { Admin } from "./entities/admin.entity";
@@ -35,8 +38,6 @@ import { Customer_group_participant } from "./entities/customerGroupParticipant.
 import { customerInventoryRouter } from './routes/customerInventory.routes';
 import { Customer_voucher } from "./entities/customerVouchers.entity";
 import { Streak } from "./entities/Streak";
-
-dotenv.config();
 
 export const AppDataSource = new DataSource({
 	type: "postgres",
