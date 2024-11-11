@@ -7,12 +7,19 @@ import { Business_account } from '../entities/businessAccount.entity';
 import { Customer_inventory } from '../entities/customerInventory.entity';
 import { Customer_voucher } from '../entities/customerVouchers.entity';
 
-
 type PaymentIntentInfo = {
   customer_id: number;
   clientSecret: string | null;
   paymentIntentId: string;
 };
+
+const priceIds = {
+  bundle50Gems: process.env.STRIPE_PRICE_ID_50_GEMS,
+  bundle100Gems: process.env.STRIPE_PRICE_ID_100_GEMS,
+  bundle250Gems: process.env.STRIPE_PRICE_ID_250_GEMS,
+  bundle500Gems: process.env.STRIPE_PRICE_ID_500_GEMS,
+  bundle1000Gems: process.env.STRIPE_PRICE_ID_1000_GEMS,
+}
 
 export const finalizeGroupPurchase = async (req: Request, res: Response) => {
   const { group_purchase_id } = req.body;
@@ -260,6 +267,48 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
     res.status(500).json({ error: error.message });
   }
 };
+
+export const createStripeSubscription = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { productName } = req.body;
+    const priceId = priceIds[productName];
+
+    const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
+    const userStripeId = await createOrGetUserStripeId(userId, userRole);
+
+    // Create a new subscription
+    const subscription = await stripe.subscriptions.create({
+      customer: userStripeId,
+      items: [{
+        price: priceId,
+      }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['latest_invoice.payment_intent'],
+    });
+
+    // Check if latest_invoice is valid and payment_intent is a PaymentIntent object
+    const latestInvoice = subscription.latest_invoice;
+    if (latestInvoice && typeof latestInvoice !== 'string' && latestInvoice.payment_intent) {
+      const paymentIntent = latestInvoice.payment_intent;
+
+      // Check if payment_intent is an object and contains client_secret
+      if (typeof paymentIntent !== 'string' && paymentIntent.client_secret) {
+        res.status(200).json({
+          clientSecret: paymentIntent.client_secret,
+          subscriptionId: subscription.id,
+        });
+      } else {
+        res.status(500).json({ error: 'No valid client secret found in payment intent.' });
+      }
+    } else {
+      res.status(500).json({ error: 'No valid payment intent found for the subscription.' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 export const getUserEmailandUsername = async (req: Request, res: Response): Promise<void> => {
   try {
