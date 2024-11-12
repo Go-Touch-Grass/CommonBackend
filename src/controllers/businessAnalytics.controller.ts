@@ -24,7 +24,7 @@ export const getMostPopularVoucher = async (req: Request, res: Response) => {
         { business_register_business: businessAccount.business },
         { outlet: { outlet_id: In(businessAccount.outlets.map(outlet => outlet.outlet_id)) } },
       ],
-      relations: ['transactions'],
+      relations: ['transactions', 'rewardItem'],
     });
 
     // Step 3: Determine the voucher with the highest number of transactions
@@ -46,11 +46,7 @@ export const getMostPopularVoucher = async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({
-      voucherId: mostPopularVoucher.listing_id,
-      name: mostPopularVoucher.name,
-      transactionCount: mostPopularVoucher.transactions.length,
-    });
+    res.json({ mostPopularVoucher});
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
