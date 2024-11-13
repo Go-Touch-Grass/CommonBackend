@@ -566,12 +566,16 @@ function calculateXpForNextLevel(level: number): number {
     return Math.floor(100 * Math.pow(1.5, level - 1));
 }
 
+function generateUniqueReferralCode(): string{
+    return Math.random().toString(36).substring(2, 10).toUpperCase(); 
+}
+
 export const registerCustomer = async (
     req: Request,
     res: Response
 ): Promise<void> => {
     try {
-        const { fullName, username, email, password } = req.body;
+        const { fullName, username, email, password, referral_code } = req.body;
 
         // Check if username or email is already in use
         const existingUser = await Customer_account.findOne({
@@ -595,6 +599,7 @@ export const registerCustomer = async (
         const otp = generateOTP();
         const hashedOTP = await bcrypt.hash(otp, 10);  // Hash OTP for security
         const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);  // OTP valid for 10 minutes
+        const newReferralCode = generateUniqueReferralCode()
 
         const customer_account = Customer_account.create({
             fullName,
@@ -603,10 +608,50 @@ export const registerCustomer = async (
             password: hashedPassword,
             exp: 0,
             otp: hashedOTP,
-            otpExpiresAt
+            otpExpiresAt,
+            referral_code: newReferralCode,
         });
 
-        await customer_account.save();
+
+        //if used friend's referral code, free 50 gems upon sign up for both accounts
+        if (referral_code){
+            const friend = await Customer_account.findOne({
+                where: { referral_code },
+                relations: ["friends"]
+            });
+        
+            if(friend){
+                await customer_account.save();
+
+                const newUser = await Customer_account.findOne({
+                    where: { username },
+                    relations: ["friends"]
+                })
+
+                if(newUser){
+                    newUser.gem_balance += 50
+                    newUser.friends.push(friend)
+                    await newUser.save();
+
+                    friend.gem_balance += 50
+                    friend.code_used += 1
+                    friend.friends.push(newUser)
+    
+                    await friend.save();
+                }
+
+                    } else {
+                        console.log("Invalid referral code")
+                        res.status(404).json({
+                            status: 404,
+                            message: "Invalid referral code"
+                        });
+                        return;
+                    }
+        
+        } else {
+            await customer_account.save();
+        }
 
         const customer_inventory = Customer_inventory.create({
             customer_account, // Link the inventory to the customer account
@@ -948,7 +993,7 @@ export const getUserInfo = async (
         const userId = (req as any).user.id;
         const customer_account = await Customer_account.findOne({
             where: { id: userId },
-            select: ["id", "fullName", "username", "email", "exp", "gem_balance"],
+            select: ["id", "fullName", "username", "email", "exp", "gem_balance", "code_used", "referral_code"],
             relations: ["streak"],
         });
 
