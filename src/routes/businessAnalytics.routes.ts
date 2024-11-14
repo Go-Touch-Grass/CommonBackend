@@ -1,10 +1,14 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth";
 import { UserRole } from "../entities/abstract/abstractUser.entity";
-import { getMostPopularVoucher } from "../controllers/businessAnalytics.controller";
+import {
+  getMostPopularVoucher,
+  getVoucherRedemptionRate,
+} from "../controllers/businessAnalytics.controller";
 
 const router = express.Router();
 
-router.get("/api/business-analytics/most-popular-voucher", authMiddleware([UserRole.BUSINESS]), getMostPopularVoucher);
+router.get('/api/business-analytics/most-popular-voucher', authMiddleware([UserRole.BUSINESS]), getMostPopularVoucher);
+router.get('/api/business-analytics/voucher-redemption-rate', authMiddleware([UserRole.BUSINESS]), getVoucherRedemptionRate);
 
 export { router as businessAnalyticsRouter };
