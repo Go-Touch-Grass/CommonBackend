@@ -14,6 +14,11 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
     try {
         const { name, type, filepath, approved } = req.body;
 
+        if(!name || !type || !filepath){
+            res.status(400).json({ message: 'Missing fields' });
+            return
+        }
+
         const item = Item.create({
             name,
             type,

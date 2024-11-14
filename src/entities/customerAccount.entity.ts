@@ -43,6 +43,12 @@ export class Customer_account extends AbstractStripeUser {
 	password: string;
 	*/
 
+	@Column({unique: true})
+	referral_code: string;
+
+	@Column({ default: 0 })
+	code_used: number;
+
 	@Column({ default: 0 })
 	exp: number;
 

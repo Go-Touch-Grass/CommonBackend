@@ -61,14 +61,21 @@ export const banUnbanBusiness = async (
         const { business_id } = req.params;
         const id = parseInt(business_id);
         const { status, remarks } = req.body;
+        if (!status){
+            res.status(400).json({
+                status: 400,
+                message: "Updated status required",
+            });
+            return;
+        }
         const business = await Business_account.findOne({
             where: { business_id: id },
             relations: ['business', 'outlets']
         });
 
         if (!business) {
-            res.status(400).json({
-                status: 400,
+            res.status(404).json({
+                status: 404,
                 message: "Business registration not found",
             });
             return;
@@ -123,6 +130,13 @@ export const getOneBusiness = async (req: Request, res: Response): Promise<void>
         const { business_id } = req.params;
         const id = parseInt(business_id);
         const business = await Business_account.findOneBy({ business_id: id }); // Fetch one business
+        if(!business){
+            res.status(404).json({
+                status: 404,
+                message: 'Account does not exist.'
+            });
+            return;
+        }
         res.status(200).json(business);
     } catch (error) {
         console.log(error);
@@ -153,6 +167,13 @@ export const getPendingBusinessRegistrationByRegistrationId = async (req: Reques
         const { registration_id } = req.params;
         const id = parseInt(registration_id);
         const pendingBusinessRegistration = await Business_register_business.findOneBy({ registration_id: id }); // Fetch one pending business
+        if(!pendingBusinessRegistration){
+            res.status(404).json({
+                status: 404,
+                message: 'Registration does not exist'
+            });
+            return;
+        }
         res.status(200).json(pendingBusinessRegistration);
     } catch (error) {
         console.log(error);
@@ -168,11 +189,18 @@ export const reviewPendingBusinessRegistrationByRegistrationId = async (req: Req
         const { registration_id } = req.params;
         const id = parseInt(registration_id);
         const { status, remarks } = req.body;
+        if (!status) {
+            res.status(400).json({
+                status: 400,
+                message: 'Updated Status required'
+            });
+            return;
+        }
         const pendingBusinessRegistration = await Business_register_business.findOneBy({ registration_id: id }); // Fetch one pending business
 
         if (!pendingBusinessRegistration) {
-            res.status(400).json({
-                status: 400,
+            res.status(404).json({
+                status: 404,
                 message: 'Business registration not found'
             });
             return;
@@ -242,6 +270,13 @@ export const getCustomerByCustomerId = async (req: Request, res: Response): Prom
         const { customer_id } = req.params;
         const id = parseInt(customer_id);
         const customer = await Customer_account.findOneBy({ id: id }); // Fetch one customer
+        if(!customer){
+            res.status(404).json({
+                status: 404,
+                message: 'Account does not exist'
+            });
+            return;
+        }
         res.status(200).json(customer);
     } catch (error) {
         console.log(error);
@@ -329,6 +364,15 @@ export const reviewPendingRequestById = async (req: Request, res: Response): Pro
         const { id } = req.params;
         const requestId = parseInt(id);
         const { status, remarks } = req.body;
+
+        if(!status){
+            res.status(400).json({
+                status: 400,
+                message: 'Updated status required'
+            });
+            return;
+        }
+
         const pendingItemRequest = await Item.findOneBy({ id: requestId });
 
         if (!pendingItemRequest) {
