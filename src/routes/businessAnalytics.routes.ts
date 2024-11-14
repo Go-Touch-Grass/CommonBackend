@@ -2,6 +2,7 @@ import express from "express";
 import { authMiddleware } from "../middleware/auth";
 import { UserRole } from "../entities/abstract/abstractUser.entity";
 import {
+  getGemUtilization,
   getMostPopularVoucher,
   getTotalSales,
   getVoucherRedemptionRate,
@@ -12,5 +13,6 @@ const router = express.Router();
 router.get('/api/business-analytics/most-popular-voucher', authMiddleware([UserRole.BUSINESS]), getMostPopularVoucher);
 router.get('/api/business-analytics/voucher-redemption-rate', authMiddleware([UserRole.BUSINESS]), getVoucherRedemptionRate);
 router.get('/api/business-analytics/total-sales', authMiddleware([UserRole.BUSINESS]), getTotalSales);
+router.get('/api/business-analytics/gem-utilization', authMiddleware([UserRole.BUSINESS]), getGemUtilization);
 
 export { router as businessAnalyticsRouter };

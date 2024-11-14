@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import { Business_account } from '../entities/businessAccount.entity';
 import { Business_voucher } from '../entities/businessVoucher.entity';
-import { In } from 'typeorm';
 import { Item } from '../entities/item.entity';
+import { Business_transaction } from '../entities/businessTransaction.entity';
+import { In, Between } from 'typeorm';
 
 export const getMostPopularVoucher = async (req: Request, res: Response) => {
   try {
@@ -205,6 +206,32 @@ export const getTotalSales = async (req: Request, res: Response) => {
 
     // Step 4: Return the modified vouchers with additional attributes
     res.status(200).json({ vouchers: vouchersWithTotalSales });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+
+export const getGemUtilization = async (req: Request, res: Response) => {
+  try {
+    const businessId = (req as any).user.id;
+
+    // Get the current date and calculate the date from one year ago
+    const currentDate = new Date();
+    const pastYearDate = new Date();
+    pastYearDate.setFullYear(currentDate.getFullYear() - 1);
+
+    // Retrieve transactions for the past year with gems deducted
+    const transactions = await Business_transaction.find({
+      where: {
+        business_account: { business_id: businessId },
+        gems_deducted: Between(1, 2147483647), // Use PostgreSQL's integer max limit
+        transaction_date: Between(pastYearDate, currentDate),
+      },
+      order: { transaction_date: "ASC" },
+    });
+
+    res.status(200).json(transactions);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
