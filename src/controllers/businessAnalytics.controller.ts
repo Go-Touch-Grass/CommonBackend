@@ -133,3 +133,79 @@ export const getVoucherRedemptionRate = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 }
+
+interface VoucherTotalSales {
+  listing_id: number;
+  name: string;
+  description: string;
+  price: number;
+  discount: number;
+  voucherImage: string;
+  created_at: Date;
+  updated_at: Date;
+  duration: number;
+  expirationDate: Date;
+  discountedPrice: number;
+  groupPurchaseEnabled: boolean;
+  groupSize: number;
+  groupDiscount: number;
+  rewardItem: Item | null;
+  totalSales: number;
+}
+
+export const getTotalSales = async (req: Request, res: Response) => {
+  try {
+    const businessId = (req as any).user.id;
+
+    // Step 1: Fetch the main business and its outlets
+    const businessAccount = await Business_account.findOne({
+      where: { business_id: businessId },
+      relations: ['business', 'outlets'],
+    });
+
+    if (!businessAccount) {
+      res.status(404).json({ message: 'Business not found' });
+      return;
+    }
+
+    // Step 2: Collect all vouchers associated with both main business and outlets
+    const businessVouchers = await Business_voucher.find({
+      where: [
+        { business_register_business: businessAccount.business },
+        { outlet: { outlet_id: In(businessAccount.outlets.map(outlet => outlet.outlet_id)) } },
+      ],
+      relations: ['voucherInstances', 'transactions', 'rewardItem'],
+    });
+
+    // Step 3: Calculate redemption rate and return new objects
+    const vouchersWithTotalSales: VoucherTotalSales[] = businessVouchers.map((voucher) => {
+      const vouchersUnredeemed = voucher.voucherInstances.reduce((sum, instance) => sum + instance.quantity, 0);
+      const vouchersRedeemed = voucher.transactions.length;
+      const totalVouchers = vouchersUnredeemed + vouchersRedeemed;
+
+      return {
+        listing_id: voucher.listing_id,
+        name: voucher.name,
+        description: voucher.description,
+        price: voucher.price,
+        discount: voucher.discount,
+        voucherImage: voucher.voucherImage,
+        created_at: voucher.created_at,
+        updated_at: voucher.updated_at,
+        duration: voucher.duration,
+        expirationDate: voucher.expirationDate,
+        discountedPrice: voucher.discountedPrice,
+        groupPurchaseEnabled: voucher.groupPurchaseEnabled,
+        groupSize: voucher.groupSize,
+        groupDiscount: voucher.groupDiscount,
+        rewardItem: voucher.rewardItem,
+        totalSales: totalVouchers,
+      };
+    });
+
+    // Step 4: Return the modified vouchers with additional attributes
+    res.status(200).json({ vouchers: vouchersWithTotalSales });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
