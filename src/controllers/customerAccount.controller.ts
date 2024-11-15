@@ -1462,4 +1462,36 @@ export const updateCustomerXP = async (req: Request, res: Response): Promise<voi
             message: "Internal server error",
         });
     }
+
+    
+};
+
+export const customerCashback = async (req: Request, res: Response): Promise<void> => {
+    const userId = (req as any).user.id;
+    const { quantity } = req.body;
+
+    if (typeof quantity !== 'number' || quantity <= 0) {
+        res.status(400).json({ message: "Quantity must be a positive number" });
+        return;
+    }
+
+    try {
+        const customer = await Customer_account.findOne({ where: { id: userId } });
+
+        if (!customer) {
+            res.status(404).json({ message: "Customer not found" });
+            return;
+        }
+
+        customer.gem_balance += quantity;
+        await customer.save();
+
+        res.status(200).json({
+            message: "Cashback added successfully",
+            new_balance: customer.gem_balance
+        });
+    } catch (error) {
+        console.error('Error adding cashback:', error);
+        res.status(500).json({ message: "Internal server error" });
+    }
 };
