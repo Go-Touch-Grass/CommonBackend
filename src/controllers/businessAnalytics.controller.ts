@@ -4,6 +4,7 @@ import { Business_voucher } from '../entities/businessVoucher.entity';
 import { Item } from '../entities/item.entity';
 import { Business_transaction, TransactionType } from '../entities/businessTransaction.entity';
 import { In, Between } from 'typeorm';
+import { AppDataSource } from '../index';
 
 export const getMostPopularVoucher = async (req: Request, res: Response) => {
   try {
@@ -33,7 +34,7 @@ export const getMostPopularVoucher = async (req: Request, res: Response) => {
     const mostPopularVoucher = businessVouchers.reduce<Business_voucher | null>(
       (maxVoucher, currentVoucher) => {
         const currentTransactionCount = currentVoucher.transactions.length;
-    
+
         if (!maxVoucher || currentTransactionCount > maxVoucher.transactions.length) {
           return currentVoucher;
         }
@@ -41,14 +42,14 @@ export const getMostPopularVoucher = async (req: Request, res: Response) => {
       },
       null // Explicitly set initial value to null
     );
-    
+
 
     if (!mostPopularVoucher) {
       res.status(404).json({ message: 'No vouchers found' });
       return;
     }
 
-    res.json({ mostPopularVoucher});
+    res.json({ mostPopularVoucher });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -236,3 +237,23 @@ export const getGemUtilization = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 }
+
+export const getTransactionCounts = async (req: Request, res: Response) => {
+  try {
+    const businessId = (req as any).user.id;
+
+    // Group transactions by type and count them
+    const transactionCounts = await AppDataSource.getRepository(Business_transaction)
+      .createQueryBuilder("transaction")
+      .select("transaction.transaction_type", "transactionType")
+      .addSelect("COUNT(*)", "count")
+      .where("transaction.business_account = :businessId", { businessId })
+      .groupBy("transaction.transaction_type")
+      .getRawMany();
+
+    res.status(200).json({ transactionCounts });
+  } catch (error) {
+    console.error('Error fetching transaction counts:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};

@@ -5,6 +5,7 @@ import {
   getGemUtilization,
   getMostPopularVoucher,
   getTotalSales,
+  getTransactionCounts,
   getVoucherRedemptionRate,
 } from "../controllers/businessAnalytics.controller";
 
@@ -14,5 +15,6 @@ router.get('/api/business-analytics/most-popular-voucher', authMiddleware([UserR
 router.get('/api/business-analytics/voucher-redemption-rate', authMiddleware([UserRole.BUSINESS]), getVoucherRedemptionRate);
 router.get('/api/business-analytics/total-sales', authMiddleware([UserRole.BUSINESS]), getTotalSales);
 router.get('/api/business-analytics/gem-utilization', authMiddleware([UserRole.BUSINESS]), getGemUtilization);
+router.get('/api/business-analytics/transaction-counts', authMiddleware([UserRole.BUSINESS]), getTransactionCounts);
 
 export { router as businessAnalyticsRouter };
