@@ -39,6 +39,8 @@ import { customerInventoryRouter } from './routes/customerInventory.routes';
 import { Customer_voucher } from "./entities/customerVouchers.entity";
 import { Streak } from "./entities/Streak";
 
+import { businessAnalyticsRouter } from "./routes/businessAnalytics.routes";
+
 export const AppDataSource = new DataSource({
 	type: "postgres",
 	host: process.env.DB_HOST,
@@ -282,6 +284,7 @@ const main = async () => {
 		app.use(avatarRouter);
 		app.use(customerSocialRouter);
 		app.use(customerInventoryRouter); // Add this line to use the new router
+		app.use(businessAnalyticsRouter);
 
 		app.listen(8080, () => {
 			console.log("Now running on port 8080");
