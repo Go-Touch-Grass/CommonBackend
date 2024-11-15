@@ -11,22 +11,27 @@ const client = new AzureOpenAI({
 
 export const createChatCompletion = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { messages } = req.body;
+        const { messages, systemPrompt } = req.body;
 
         if (!messages || !Array.isArray(messages)) {
             res.status(400).json({ message: 'Messages array is required' });
             return;
         }
 
+        // Add system prompt if provided
+        const fullMessages = systemPrompt
+            ? [{ role: 'system', content: systemPrompt }, ...messages]
+            : messages;
+
         const response = await client.chat.completions.create({
-            messages,
+            messages: fullMessages,
             temperature: 0.7,
             max_tokens: 800,
             model: "", // model is specified via deployment
         });
 
         const completion = response.choices[0].message;
-        res.json({ 
+        res.json({
             message: completion.content,
             role: completion.role
         });
@@ -39,12 +44,17 @@ export const createChatCompletion = async (req: Request, res: Response): Promise
 
 export const streamChatCompletion = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { messages } = req.body;
+        const { messages, systemPrompt } = req.body;
 
         if (!messages || !Array.isArray(messages)) {
             res.status(400).json({ message: 'Messages array is required' });
             return;
         }
+
+        // Add system prompt if provided
+        const fullMessages = systemPrompt
+            ? [{ role: 'system', content: systemPrompt }, ...messages]
+            : messages;
 
         // Set headers for SSE
         res.setHeader('Content-Type', 'text/event-stream');
@@ -52,7 +62,7 @@ export const streamChatCompletion = async (req: Request, res: Response): Promise
         res.setHeader('Connection', 'keep-alive');
 
         const stream = await client.chat.completions.create({
-            messages,
+            messages: fullMessages,
             temperature: 0.7,
             model: "", // model is specified via deployment
             stream: true,
