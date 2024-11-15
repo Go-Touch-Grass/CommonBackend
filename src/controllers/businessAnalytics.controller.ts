@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { Business_account } from '../entities/businessAccount.entity';
 import { Business_voucher } from '../entities/businessVoucher.entity';
 import { Item } from '../entities/item.entity';
-import { Business_transaction } from '../entities/businessTransaction.entity';
+import { Business_transaction, TransactionType } from '../entities/businessTransaction.entity';
 import { In, Between } from 'typeorm';
 
 export const getMostPopularVoucher = async (req: Request, res: Response) => {
@@ -225,7 +225,7 @@ export const getGemUtilization = async (req: Request, res: Response) => {
     const transactions = await Business_transaction.find({
       where: {
         business_account: { business_id: businessId },
-        gems_deducted: Between(1, 2147483647), // Use PostgreSQL's integer max limit
+        transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
         transaction_date: Between(pastYearDate, currentDate),
       },
       order: { transaction_date: "ASC" },
