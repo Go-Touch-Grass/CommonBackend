@@ -302,14 +302,19 @@ export const getGroupPurchaseAnalytics = async (req: Request, res: Response) => 
     }
 
     // Step 2: Collect all vouchers associated with both main business and outlets
-    const businessVouchers = await Business_voucher.find({
-      where: [
-        { business_register_business: businessAccount.business },
-        { outlet: { outlet_id: In(businessAccount.outlets.map(outlet => outlet.outlet_id)) } },
-        { groupPurchaseEnabled: true },
-      ],
-      relations: ['rewardItem', 'groupPurchases'],
-    });
+    const registerBusinessId = businessAccount.business.registration_id;
+    const outletIds = businessAccount.outlets.map(outlet => outlet.outlet_id);
+
+    const businessVouchers = await Business_voucher.createQueryBuilder("voucher")
+      .leftJoinAndSelect("voucher.rewardItem", "rewardItem")
+      .leftJoinAndSelect("voucher.groupPurchases", "groupPurchases")
+      .where("voucher.groupPurchaseEnabled = :enabled", { enabled: true })
+      .andWhere(
+        "(voucher.business_register_business = :registerBusinessId OR voucher.outlet IN (:...outletIds))",
+        { registerBusinessId, outletIds }
+      )
+      .getMany();
+
 
     // Step 3: Calculate analytics for each voucher
     const analytics: VoucherGroupPurchaseAnalytics[] = businessVouchers.map(voucher => {
