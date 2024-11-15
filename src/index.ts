@@ -38,6 +38,7 @@ import { Customer_group_participant } from "./entities/customerGroupParticipant.
 import { customerInventoryRouter } from './routes/customerInventory.routes';
 import { Customer_voucher } from "./entities/customerVouchers.entity";
 import { Streak } from "./entities/Streak";
+import { chatRouter } from "./routes/chat.routes";
 
 export const AppDataSource = new DataSource({
 	type: "postgres",
@@ -281,7 +282,8 @@ const main = async () => {
 		app.use(itemRouter);
 		app.use(avatarRouter);
 		app.use(customerSocialRouter);
-		app.use(customerInventoryRouter); // Add this line to use the new router
+		app.use(customerInventoryRouter);
+		app.use(chatRouter);
 
 		app.listen(8080, () => {
 			console.log("Now running on port 8080");
