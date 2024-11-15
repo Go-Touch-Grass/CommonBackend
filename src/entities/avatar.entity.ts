@@ -63,4 +63,7 @@ export class Avatar extends BaseEntity {
     @ManyToOne(() => Item, { nullable: true })
     @JoinColumn({ name: "bottom_id" })
     bottom: Item | null;
+
+    @Column({ default: 0 })
+    engagement_count: number;
 }

@@ -5,6 +5,7 @@ import { Business_account } from '../entities/businessAccount.entity';
 import { Item, ItemType } from '../entities/item.entity';
 import { Business_register_business } from '../entities/businessRegisterBusiness.entity';
 import { Outlet } from '../entities/outlet.entity';
+import { UserRole } from '../entities/abstract/abstractUser.entity';
 
 export const createAvatar = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -167,6 +168,8 @@ export const getAvatarByBusinessRegistrationId = async (req: Request, res: Respo
     try {
         const registrationId = req.params.registration_id;
 
+        const userRole = (req as any).user.role;
+
         const avatar = await Avatar.findOne({
             where: { business_register_business: { registration_id: parseInt(registrationId) } },
             relations: ['business_register_business', 'base', 'hat', 'shirt', 'bottom']
@@ -175,6 +178,12 @@ export const getAvatarByBusinessRegistrationId = async (req: Request, res: Respo
         if (!avatar) {
             res.status(404).json({ message: 'No avatar found for this business registration' });
             return;
+        }
+
+        // Increment engagement count if customer is viewing the avatar
+        if (userRole === UserRole.CUSTOMER) {
+            avatar.engagement_count += 1;
+            await avatar.save();
         }
 
         res.json(avatar);
@@ -188,6 +197,8 @@ export const getAvatarByOutletId = async (req: Request, res: Response): Promise<
     try {
         const outletId = req.params.outlet_id;
 
+        const userRole = (req as any).user.role;
+
         console.log('Received outletId:', outletId); // Debugging log
 
         const avatar = await Avatar.findOne({
@@ -198,6 +209,12 @@ export const getAvatarByOutletId = async (req: Request, res: Response): Promise<
         if (!avatar) {
             res.status(404).json({ message: 'No avatar found for this outlet' });
             return;
+        }
+
+        // Increment engagement count if customer is viewing the avatar
+        if (userRole === UserRole.CUSTOMER) {
+            avatar.engagement_count += 1;
+            await avatar.save();
         }
 
         res.json(avatar);

@@ -3,6 +3,7 @@ import { Business_account } from '../entities/businessAccount.entity';
 import { Business_voucher } from '../entities/businessVoucher.entity';
 import { Item } from '../entities/item.entity';
 import { Business_transaction, TransactionType } from '../entities/businessTransaction.entity';
+import { Avatar } from '../entities/avatar.entity';
 import { In, Between } from 'typeorm';
 import { AppDataSource } from '../index';
 
@@ -257,6 +258,36 @@ export const getTransactionCounts = async (req: Request, res: Response) => {
     res.status(200).json({ transactionCounts });
   } catch (error) {
     console.error('Error fetching transaction counts:', error);
-    res.status(500).json({ success: false, error: 'Server Error' });
+    res.status(500).json({ message: error.message });
   }
 };
+
+export const getAvatarEngagements = async (req: Request, res: Response) => {
+  try {
+    const businessId = (req as any).user.id;
+
+    // Step 1: Fetch the main business and its outlets
+    const businessAccount = await Business_account.findOne({
+      where: { business_id: businessId },
+      relations: ['business', 'outlets'],
+    });
+
+    if (!businessAccount) {
+      res.status(404).json({ message: 'Business not found' });
+      return;
+    }
+
+    // Step 2: Collect all avatars associated with both main business and outlets
+    const businessAvatars = await Avatar.find({
+      where: [
+        { business_register_business: businessAccount.business },
+        { outlet: { outlet_id: In(businessAccount.outlets.map(outlet => outlet.outlet_id)) } },
+      ],
+      relations: ['business_register_business', 'outlet', 'base', 'hat', 'shirt', 'bottom'],
+    });
+
+    res.status(200).json({ avatars: businessAvatars });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
