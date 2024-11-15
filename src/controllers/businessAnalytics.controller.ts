@@ -4,6 +4,7 @@ import { Business_voucher } from '../entities/businessVoucher.entity';
 import { Item } from '../entities/item.entity';
 import { Business_transaction, TransactionType } from '../entities/businessTransaction.entity';
 import { Avatar } from '../entities/avatar.entity';
+import { paymentStatusEnum } from '../entities/customerGroupPurchase.entity';
 import { In, Between } from 'typeorm';
 import { AppDataSource } from '../index';
 
@@ -109,21 +110,7 @@ export const getVoucherRedemptionRate = async (req: Request, res: Response) => {
       const redemptionRate = totalVouchers > 0 ? (vouchersRedeemed / totalVouchers) * 100 : 0;
 
       return {
-        listing_id: voucher.listing_id,
-        name: voucher.name,
-        description: voucher.description,
-        price: voucher.price,
-        discount: voucher.discount,
-        voucherImage: voucher.voucherImage,
-        created_at: voucher.created_at,
-        updated_at: voucher.updated_at,
-        duration: voucher.duration,
-        expirationDate: voucher.expirationDate,
-        discountedPrice: voucher.discountedPrice,
-        groupPurchaseEnabled: voucher.groupPurchaseEnabled,
-        groupSize: voucher.groupSize,
-        groupDiscount: voucher.groupDiscount,
-        rewardItem: voucher.rewardItem,
+        ...voucher,
         vouchersUnredeemed,
         vouchersRedeemed,
         redemptionRate: Math.round(redemptionRate * 100) / 100,
@@ -187,21 +174,7 @@ export const getTotalSales = async (req: Request, res: Response) => {
       const totalVouchers = vouchersUnredeemed + vouchersRedeemed;
 
       return {
-        listing_id: voucher.listing_id,
-        name: voucher.name,
-        description: voucher.description,
-        price: voucher.price,
-        discount: voucher.discount,
-        voucherImage: voucher.voucherImage,
-        created_at: voucher.created_at,
-        updated_at: voucher.updated_at,
-        duration: voucher.duration,
-        expirationDate: voucher.expirationDate,
-        discountedPrice: voucher.discountedPrice,
-        groupPurchaseEnabled: voucher.groupPurchaseEnabled,
-        groupSize: voucher.groupSize,
-        groupDiscount: voucher.groupDiscount,
-        rewardItem: voucher.rewardItem,
+        ...voucher,
         totalSales: totalVouchers,
       };
     });
@@ -291,3 +264,73 @@ export const getAvatarEngagements = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 }
+
+interface VoucherGroupPurchaseAnalytics {
+  listing_id: number;
+  name: string;
+  description: string;
+  price: number;
+  discount: number;
+  voucherImage: string;
+  created_at: Date;
+  updated_at: Date;
+  duration: number;
+  expirationDate: Date;
+  discountedPrice: number;
+  groupPurchaseEnabled: boolean;
+  groupSize: number;
+  groupDiscount: number;
+  rewardItem: Item | null;
+  totalStarted: number;
+  totalCompleted: number;
+  completionPercentage: number;
+}
+
+export const getGroupPurchaseAnalytics = async (req: Request, res: Response) => {
+  try {
+    const businessId = (req as any).user.id;
+
+    // Step 1: Fetch the main business and its outlets
+    const businessAccount = await Business_account.findOne({
+      where: { business_id: businessId },
+      relations: ['business', 'outlets'],
+    });
+
+    if (!businessAccount) {
+      res.status(404).json({ message: 'Business not found' });
+      return;
+    }
+
+    // Step 2: Collect all vouchers associated with both main business and outlets
+    const businessVouchers = await Business_voucher.find({
+      where: [
+        { business_register_business: businessAccount.business },
+        { outlet: { outlet_id: In(businessAccount.outlets.map(outlet => outlet.outlet_id)) } },
+        { groupPurchaseEnabled: true },
+      ],
+      relations: ['rewardItem', 'groupPurchases'],
+    });
+
+    // Step 3: Calculate analytics for each voucher
+    const analytics: VoucherGroupPurchaseAnalytics[] = businessVouchers.map(voucher => {
+      const groupPurchases = voucher.groupPurchases ?? [];
+      const totalStarted = groupPurchases.length;
+      const totalCompleted = groupPurchases.filter(
+        (purchase) => purchase.paymentStatus === paymentStatusEnum.COMPLETED
+      ).length;
+      const completionPercentage = totalStarted > 0 ? (totalCompleted / totalStarted) * 100 : 0;
+
+      return {
+        ...voucher,
+        totalStarted,
+        totalCompleted,
+        completionPercentage: Number(completionPercentage.toFixed(2)),
+      };
+    });
+
+    // Step 4: Return the analytics data
+    return res.status(200).json(analytics);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};

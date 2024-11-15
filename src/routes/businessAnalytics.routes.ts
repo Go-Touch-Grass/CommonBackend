@@ -4,6 +4,7 @@ import { UserRole } from "../entities/abstract/abstractUser.entity";
 import {
   getAvatarEngagements,
   getGemUtilization,
+  getGroupPurchaseAnalytics,
   getMostPopularVoucher,
   getTotalSales,
   getTransactionCounts,
@@ -18,5 +19,6 @@ router.get('/api/business-analytics/total-sales', authMiddleware([UserRole.BUSIN
 router.get('/api/business-analytics/gem-utilization', authMiddleware([UserRole.BUSINESS]), getGemUtilization);
 router.get('/api/business-analytics/transaction-counts', authMiddleware([UserRole.BUSINESS]), getTransactionCounts);
 router.get('/api/business-analytics/avatar-engagements', authMiddleware([UserRole.BUSINESS]), getAvatarEngagements);
+router.get('/api/business-analytics/group-purchase-analytics', authMiddleware([UserRole.BUSINESS]), getGroupPurchaseAnalytics);
 
 export { router as businessAnalyticsRouter };
