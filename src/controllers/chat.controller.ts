@@ -23,8 +23,8 @@ CRITICAL RULES:
 - NEVER respond with plain text
 - Keep all responses under 50 words
 - Track conversation depth internally
-- After 7 exchanges, start wrapping up
-- At 10 exchanges, only provide farewell options
+- After 15 exchanges, start wrapping up
+- At 20 exchanges, only provide farewell options
   
 RESPONSE FORMAT - EXACTLY LIKE THIS:
 {
@@ -107,6 +107,7 @@ export const createChatCompletion = async (req: Request, res: Response): Promise
         } catch (e) {
             console.error('Invalid JSON response:', e);
             console.log(content);
+            console.log(fullMessages);
             // Fallback response if JSON is invalid
             content = JSON.stringify({
                 npc_response: content,
