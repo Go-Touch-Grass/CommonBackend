@@ -6,6 +6,7 @@ import { UserRole } from '../entities/abstract/abstractUser.entity';
 import { Business_account } from '../entities/businessAccount.entity';
 import { Customer_inventory } from '../entities/customerInventory.entity';
 import { Customer_voucher } from '../entities/customerVouchers.entity';
+import { Business_transaction, TransactionType } from '../entities/businessTransaction.entity';
 
 type PaymentIntentInfo = {
   customer_id: number;
@@ -475,23 +476,35 @@ export const createBusinessOnboardingLink = async (req: Request, res: Response):
 export const cashout = async (req: Request, res: Response): Promise<void> => {
   try {
     const businessId = (req as any).user.id;
-    const { amount } = req.body;
-    const business = await Business_account.findOne({ where: { business_id: businessId } });
+    const {
+      currency_amount: currencyAmount, // In SGD
+      gem_amount: gemAmount,
+    } = req.body;
 
-    if (!business || business.gem_balance < amount) {
+    const business = await Business_account.findOne({ where: { business_id: businessId } });
+    if (!business || business.gem_balance < gemAmount) {
       res.status(400).json({ error: 'Insufficient gems' });
       return;
     }
 
     const transfer = await stripe.transfers.create({
-      amount: amount * 100, // Convert to cents
+      amount: currencyAmount * 100, // Convert to cents
       currency: 'sgd',
       destination: business.stripeAccountId,
     });
 
     // Update gem balance and save transaction record
-    business.gem_balance -= amount;
+    business.gem_balance -= gemAmount;
     await business.save();
+
+    // Create a new transaction record
+    const businessTransaction = Business_transaction.create({
+      currency_amount: currencyAmount,
+      gems_deducted: gemAmount,
+      transaction_type: TransactionType.GEM_CASHOUT,
+      business_account: business,
+    });
+    businessTransaction.save();
 
     res.json({ success: true });
   } catch (error) {
