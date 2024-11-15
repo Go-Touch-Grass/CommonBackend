@@ -251,6 +251,9 @@ export const getTransactionCounts = async (req: Request, res: Response) => {
       .groupBy("transaction.transaction_type")
       .getRawMany();
 
+    // Convert count to a number after fetching if needed
+    transactionCounts.forEach(item => item.count = Number(item.count));
+
     res.status(200).json({ transactionCounts });
   } catch (error) {
     console.error('Error fetching transaction counts:', error);
