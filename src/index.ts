@@ -39,6 +39,8 @@ import { customerInventoryRouter } from './routes/customerInventory.routes';
 import { Customer_voucher } from "./entities/customerVouchers.entity";
 import { Streak } from "./entities/Streak";
 import { chatRouter } from "./routes/chat.routes";
+import { avatarPromptRouter } from "./routes/avatarPrompt.routes";
+import { AvatarPrompt } from "./entities/avatarPrompt.entity";
 
 export const AppDataSource = new DataSource({
 	type: "postgres",
@@ -64,7 +66,8 @@ export const AppDataSource = new DataSource({
 		Customer_voucher,
 		Customer_group_purchase,
 		Customer_group_participant,
-		Streak
+		Streak,
+		AvatarPrompt,
 	],
 	synchronize: true,
 });
@@ -284,7 +287,7 @@ const main = async () => {
 		app.use(customerSocialRouter);
 		app.use(customerInventoryRouter);
 		app.use(chatRouter);
-
+		app.use(avatarPromptRouter);
 		app.listen(8080, () => {
 			console.log("Now running on port 8080");
 		});
