@@ -9,6 +9,6 @@ const router = express.Router();
 router.post("/api/avatars/business/prompt", authMiddleware([UserRole.BUSINESS]), createAvatarPrompt);
 router.put("/api/avatars/business/prompt/:id", authMiddleware([UserRole.BUSINESS]), updateAvatarPrompt);
 // router.get("/api/avatars/business/prompt/:id", authMiddleware([UserRole.BUSINESS]), getAvatarPrompt);
-router.get("/api/avatars/business/prompt/:avatarId", authMiddleware([UserRole.BUSINESS]), getAvatarPromptByAvatarId);
+router.get("/api/avatars/business/prompt/:avatarId", authMiddleware([UserRole.BUSINESS, UserRole.CUSTOMER]), getAvatarPromptByAvatarId);
 
 export { router as avatarPromptRouter };
