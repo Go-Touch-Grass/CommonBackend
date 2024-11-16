@@ -7,6 +7,7 @@ import { Business_account } from '../entities/businessAccount.entity';
 import { Customer_inventory } from '../entities/customerInventory.entity';
 import { Customer_voucher } from '../entities/customerVouchers.entity';
 import { Business_transaction, TransactionType } from '../entities/businessTransaction.entity';
+import { Customer_transaction } from '../entities/customerTransaction.entity';
 
 type PaymentIntentInfo = {
   customer_id: number;
@@ -119,6 +120,13 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
         // Deduct the required gems from the customer's gem balance
         customer.gem_balance -= finalPriceInGems;
         await customer.save();
+
+        // Log the transaction in the customer's transaction history
+        const customerTransaction = Customer_transaction.create({
+          gems_deducted: finalPriceInGems,
+          customer_account: customer,
+        });
+        await customerTransaction.save();
 
         // Increment the business's gem balance
         businessAccount.gem_balance += finalPriceInGems;
