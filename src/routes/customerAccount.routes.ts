@@ -21,6 +21,7 @@ import {
     getAllJoinedGroups,
     updateCustomerXP,
     repairStreak,
+    customerCashback
 } from "../controllers/customerAccount.controller";
 import { UserRole } from '../entities/abstract/abstractUser.entity';
 
@@ -53,4 +54,7 @@ router.get('/auth/subscription', authMiddleware([UserRole.CUSTOMER]), getAllVali
 router.post("/auth/update-xp", authMiddleware([UserRole.CUSTOMER]), updateCustomerXP);
 
 router.post("/auth/customers/:customerId/repair-streak", authMiddleware([UserRole.CUSTOMER]), repairStreak);
+
+router.post("/auth/customers/customercashback", authMiddleware([UserRole.CUSTOMER]), customerCashback);
+
 export { router as customerAccountRouter };

@@ -64,6 +64,9 @@ export class Avatar extends BaseEntity {
     @JoinColumn({ name: "bottom_id" })
     bottom: Item | null;
 
+    @Column({ default: 0 })
+    engagement_count: number;
+
     @OneToOne(() => AvatarPrompt, prompt => prompt.avatar, {
         nullable: true,
         cascade: true

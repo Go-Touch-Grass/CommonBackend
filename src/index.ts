@@ -38,6 +38,8 @@ import { Customer_group_participant } from "./entities/customerGroupParticipant.
 import { customerInventoryRouter } from './routes/customerInventory.routes';
 import { Customer_voucher } from "./entities/customerVouchers.entity";
 import { Streak } from "./entities/Streak";
+
+import { businessAnalyticsRouter } from "./routes/businessAnalytics.routes";
 import { chatRouter } from "./routes/chat.routes";
 import { avatarPromptRouter } from "./routes/avatarPrompt.routes";
 import { AvatarPrompt } from "./entities/avatarPrompt.entity";
@@ -288,6 +290,8 @@ const main = async () => {
 		app.use(customerInventoryRouter);
 		app.use(chatRouter);
 		app.use(avatarPromptRouter);
+		app.use(businessAnalyticsRouter);
+
 		app.listen(8080, () => {
 			console.log("Now running on port 8080");
 		});

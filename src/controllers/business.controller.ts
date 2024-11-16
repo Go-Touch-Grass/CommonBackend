@@ -10,7 +10,7 @@ import {
   sendSubscriptionRenewEmail,
 } from "../utils/otp";
 import { BusinessAccountSubscription } from "../entities/businessAccountSubscription.entity";
-import { Business_transaction } from "../entities/businessTransaction.entity";
+import { Business_transaction, TransactionType } from "../entities/businessTransaction.entity";
 import { addMonths } from "date-fns"; // Import a helper function for date manipulation
 import { Between, getRepository, LessThanOrEqual } from "typeorm";
 import { Business_voucher } from "../entities/businessVoucher.entity";
@@ -356,6 +356,7 @@ export const editSubscription = async (
     const businessTransaction = Business_transaction.create({
       gems_deducted: total_gem,
       business_account: businessAccount,
+      transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
     });
     await businessTransaction.save();
     await businessAccount.save();
@@ -444,6 +445,7 @@ export const createSubscription = async (
     const businessTransaction = Business_transaction.create({
       gems_deducted: total_gem,
       business_account: businessAccount,
+      transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
     });
     await businessTransaction.save();
     await businessAccount.save();
@@ -582,6 +584,7 @@ export const createOutletSubscription = async (
     const businessTransaction = Business_transaction.create({
       gems_deducted: total_gem,
       business_account: businessAccount,
+      transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
     });
     await businessTransaction.save();
     await businessAccount.save();
@@ -757,6 +760,7 @@ cron.schedule('*/20 * * * * *', async () => {
         const businessTransaction = Business_transaction.create({
           gems_deducted: total_gem,
           business_account: businessAccount,
+          transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
         });
         await businessTransaction.save();
         await businessAccount.save();
@@ -2206,6 +2210,7 @@ export const verifyTopUpBusiness = async (
       gems_added: gemsAdded,
       business_account: businessAccount,
       stripe_payment_intent_id: paymentIntentId, // Store PaymentIntent ID to ensure idempotency
+      transaction_type: TransactionType.GEM_PURCHASE,
     });
     await businessTransaction.save();
 
