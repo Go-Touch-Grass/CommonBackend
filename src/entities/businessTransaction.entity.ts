@@ -1,6 +1,12 @@
 import { BaseEntity, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Business_account } from "./businessAccount.entity";
 
+export enum TransactionType {
+    GEM_PURCHASE = "gem_purchase",
+    SUBSCRIPTION_PAYMENT = "subscription_payment",
+    GEM_CASHOUT = "gem_cashout",
+}
+
 @Entity('business_transaction')
 export class Business_transaction extends BaseEntity {
     @PrimaryGeneratedColumn()
@@ -20,6 +26,9 @@ export class Business_transaction extends BaseEntity {
 
     @Column({ nullable: true })
     stripe_payment_intent_id: string;
+
+    @Column({ type: 'enum', enum: TransactionType })
+    transaction_type: TransactionType
 
     @ManyToOne(() => Business_account, business_account => business_account.transactions)
     @JoinColumn({

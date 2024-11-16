@@ -10,7 +10,7 @@ import {
   sendSubscriptionRenewEmail,
 } from "../utils/otp";
 import { BusinessAccountSubscription } from "../entities/businessAccountSubscription.entity";
-import { Business_transaction } from "../entities/businessTransaction.entity";
+import { Business_transaction, TransactionType } from "../entities/businessTransaction.entity";
 import { addMonths } from "date-fns"; // Import a helper function for date manipulation
 import { Between, getRepository, LessThanOrEqual } from "typeorm";
 import { Business_voucher } from "../entities/businessVoucher.entity";
@@ -21,6 +21,7 @@ import { Item } from '../entities/item.entity';
 import { Voucher_transaction } from '../entities/voucherTransaction.entity';
 import { Customer_account } from '../entities/customerAccount.entity';
 import { Customer_inventory } from '../entities/customerInventory.entity';
+import Stripe from "stripe";
 
 export const handleMarkUsed = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -355,6 +356,7 @@ export const editSubscription = async (
     const businessTransaction = Business_transaction.create({
       gems_deducted: total_gem,
       business_account: businessAccount,
+      transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
     });
     await businessTransaction.save();
     await businessAccount.save();
@@ -443,6 +445,7 @@ export const createSubscription = async (
     const businessTransaction = Business_transaction.create({
       gems_deducted: total_gem,
       business_account: businessAccount,
+      transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
     });
     await businessTransaction.save();
     await businessAccount.save();
@@ -581,6 +584,7 @@ export const createOutletSubscription = async (
     const businessTransaction = Business_transaction.create({
       gems_deducted: total_gem,
       business_account: businessAccount,
+      transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
     });
     await businessTransaction.save();
     await businessAccount.save();
@@ -766,6 +770,7 @@ cron.schedule('*/20 * * * * *', async () => {
         const businessTransaction = Business_transaction.create({
           gems_deducted: total_gem,
           business_account: businessAccount,
+          transaction_type: TransactionType.SUBSCRIPTION_PAYMENT,
         });
         await businessTransaction.save();
         await businessAccount.save();
@@ -890,8 +895,8 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     const existingSubscription = await BusinessAccountSubscription.findOne({
       where: {
         business_register_business: businessAccount.business,
-        outlet: outlet_id || null, // Match outlet_id or main subscription (null)
-        status: 'active' // Only renew active subscriptions
+        outlet: outlet_id || null,
+        status: 'active'
       },
       relations: ['business_register_business']
     });
@@ -917,12 +922,12 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
       newExpirationDate = new Date(currentDate);
     }
 
-    // Extend by the subscription duration
+
     newExpirationDate.setMonth(newExpirationDate.getMonth() + duration);
 
     console.log('New expiration date calculated:', newExpirationDate);
 
-    // Deduct the total gem cost from the gem balance
+
     businessAccount.gem_balance -= total_gem;
 
     await businessAccount.save();
@@ -933,16 +938,16 @@ export const renewSubscription = async (req: Request, res: Response): Promise<vo
     existingSubscription.distance_coverage = distance_coverage;
     existingSubscription.total_gem = total_gem;
 
-    console.log('Saving updated subscription:', existingSubscription); // Log updated subscription before saving
+    console.log('Saving updated subscription:', existingSubscription);
     await existingSubscription.save();
     console.log('Subscription successfully renewed:', existingSubscription);
     const savedSubscription = await existingSubscription.save();
-    console.log('Subscription saved in DB:', savedSubscription); // Check if the updated object is being persisted
+    console.log('Subscription saved in DB:', savedSubscription);
 
     res.status(200).json({
       status: 200,
       message: "Subscription successfully renewed",
-      subscription: existingSubscription, // Include this to return updated data to the frontend
+      subscription: existingSubscription,
     });
   } catch (error) {
     console.error("Error renewing subscription:", error);
@@ -980,7 +985,7 @@ export const viewSubscription = async (
     const subscriptions = await BusinessAccountSubscription.find({
       where: {
         business_register_business: business,
-        status: "active", // Only get active subscriptions
+        status: "active",
       },
       relations: ["outlet"],
     });
@@ -2141,10 +2146,34 @@ export const verifyTopUpBusiness = async (
       return;
     }
 
-    // Retrieve the PaymentIntent from Stripe to verify payment status
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    // Check if the paymentIntentId is a PaymentIntent or Subscription ID
+    let paymentIntent: Stripe.PaymentIntent | undefined;
+    let isSubscription = false;
 
-    if (paymentIntent.status !== "succeeded") {
+    // First, attempt to retrieve the PaymentIntent
+    try {
+      paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    } catch (error) {
+      // If the PaymentIntent retrieval fails, check if it's a Subscription ID
+      if (error.type === 'StripeInvalidRequestError' && error.message.includes('No such payment_intent')) {
+        isSubscription = true;
+      } else {
+        throw error;
+      }
+    }
+
+    if (isSubscription) {
+      // If it's a subscription, retrieve the subscription instead
+      const subscription = await stripe.subscriptions.retrieve(paymentIntentId);
+
+      if (subscription.status !== 'active') {
+        res
+          .status(400)
+          .json({ success: false, message: "Subscription payment not active or failed" });
+        return;
+      }
+    } else if (paymentIntent && paymentIntent.status !== "succeeded") {
+      // If it's a PaymentIntent, ensure it's completed successfully
       res
         .status(400)
         .json({ success: false, message: "Payment not completed or failed" });
@@ -2185,12 +2214,13 @@ export const verifyTopUpBusiness = async (
     await businessAccount.save();
 
     // Log the transaction in the business transaction table
-    const currencyDollars = paymentIntent.amount_received / 100; // Stripe provides amount in cents
+    const currencyDollars = (paymentIntent?.amount_received || 0) / 100; // Stripe provides amount in cents
     const businessTransaction = Business_transaction.create({
       currency_amount: currencyDollars,
       gems_added: gemsAdded,
       business_account: businessAccount,
-      stripe_payment_intent_id: paymentIntent.id, // Store PaymentIntent ID to ensure idempotency
+      stripe_payment_intent_id: paymentIntentId, // Store PaymentIntent ID to ensure idempotency
+      transaction_type: TransactionType.GEM_PURCHASE,
     });
     await businessTransaction.save();
 

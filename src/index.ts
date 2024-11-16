@@ -1,5 +1,8 @@
-import { DataSource } from "typeorm";
 import * as dotenv from "dotenv";
+
+dotenv.config(); // Ensure dotenv.config() is called before any other files are executed
+
+import { DataSource } from "typeorm";
 import express from "express";
 import path from "path";
 import { Admin } from "./entities/admin.entity";
@@ -36,7 +39,10 @@ import { customerInventoryRouter } from './routes/customerInventory.routes';
 import { Customer_voucher } from "./entities/customerVouchers.entity";
 import { Streak } from "./entities/Streak";
 
-dotenv.config();
+import { businessAnalyticsRouter } from "./routes/businessAnalytics.routes";
+import { chatRouter } from "./routes/chat.routes";
+import { avatarPromptRouter } from "./routes/avatarPrompt.routes";
+import { AvatarPrompt } from "./entities/avatarPrompt.entity";
 
 export const AppDataSource = new DataSource({
 	type: "postgres",
@@ -62,7 +68,8 @@ export const AppDataSource = new DataSource({
 		Customer_voucher,
 		Customer_group_purchase,
 		Customer_group_participant,
-		Streak
+		Streak,
+		AvatarPrompt,
 	],
 	synchronize: true,
 });
@@ -280,7 +287,10 @@ const main = async () => {
 		app.use(itemRouter);
 		app.use(avatarRouter);
 		app.use(customerSocialRouter);
-		app.use(customerInventoryRouter); // Add this line to use the new router
+		app.use(customerInventoryRouter);
+		app.use(chatRouter);
+		app.use(avatarPromptRouter);
+		app.use(businessAnalyticsRouter);
 
 		app.listen(8080, () => {
 			console.log("Now running on port 8080");

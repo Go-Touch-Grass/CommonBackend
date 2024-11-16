@@ -566,12 +566,16 @@ function calculateXpForNextLevel(level: number): number {
     return Math.floor(100 * Math.pow(1.5, level - 1));
 }
 
+function generateUniqueReferralCode(): string{
+    return Math.random().toString(36).substring(2, 10).toUpperCase(); 
+}
+
 export const registerCustomer = async (
     req: Request,
     res: Response
 ): Promise<void> => {
     try {
-        const { fullName, username, email, password } = req.body;
+        const { fullName, username, email, password, referral_code } = req.body;
 
         // Check if username or email is already in use
         const existingUser = await Customer_account.findOne({
@@ -595,6 +599,7 @@ export const registerCustomer = async (
         const otp = generateOTP();
         const hashedOTP = await bcrypt.hash(otp, 10);  // Hash OTP for security
         const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);  // OTP valid for 10 minutes
+        const newReferralCode = generateUniqueReferralCode()
 
         const customer_account = Customer_account.create({
             fullName,
@@ -603,10 +608,50 @@ export const registerCustomer = async (
             password: hashedPassword,
             exp: 0,
             otp: hashedOTP,
-            otpExpiresAt
+            otpExpiresAt,
+            referral_code: newReferralCode,
         });
 
-        await customer_account.save();
+
+        //if used friend's referral code, free 50 gems upon sign up for both accounts
+        if (referral_code){
+            const friend = await Customer_account.findOne({
+                where: { referral_code },
+                relations: ["friends"]
+            });
+        
+            if(friend){
+                await customer_account.save();
+
+                const newUser = await Customer_account.findOne({
+                    where: { username },
+                    relations: ["friends"]
+                })
+
+                if(newUser){
+                    newUser.gem_balance += 50
+                    newUser.friends.push(friend)
+                    await newUser.save();
+
+                    friend.gem_balance += 50
+                    friend.code_used += 1
+                    friend.friends.push(newUser)
+    
+                    await friend.save();
+                }
+
+                    } else {
+                        console.log("Invalid referral code")
+                        res.status(404).json({
+                            status: 404,
+                            message: "Invalid referral code"
+                        });
+                        return;
+                    }
+        
+        } else {
+            await customer_account.save();
+        }
 
         const customer_inventory = Customer_inventory.create({
             customer_account, // Link the inventory to the customer account
@@ -948,7 +993,7 @@ export const getUserInfo = async (
         const userId = (req as any).user.id;
         const customer_account = await Customer_account.findOne({
             where: { id: userId },
-            select: ["id", "fullName", "username", "email", "exp", "gem_balance"],
+            select: ["id", "fullName", "username", "email", "exp", "gem_balance", "code_used", "referral_code"],
             relations: ["streak"],
         });
 
@@ -1417,4 +1462,52 @@ export const updateCustomerXP = async (req: Request, res: Response): Promise<voi
             message: "Internal server error",
         });
     }
+
+    
 };
+
+export const customerCashback = async (req: Request, res: Response): Promise<void> => {
+    const userId = (req as any).user.id;
+    const { quantity } = req.body;
+
+    if (typeof quantity !== 'number' || quantity <= 0) {
+        res.status(400).json({ message: "Quantity must be a positive number" });
+        return;
+    }
+
+    try {
+        const customer = await Customer_account.findOne({ where: { id: userId } });
+
+        if (!customer) {
+            res.status(404).json({ message: "Customer not found" });
+            return;
+        }
+
+        customer.gem_balance += quantity;
+        await customer.save();
+
+        res.status(200).json({
+            message: "Cashback added successfully",
+            new_balance: customer.gem_balance
+        });
+    } catch (error) {
+        console.error('Error adding cashback:', error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getCustomerTransactions = async (req: Request, res: Response): Promise<void> => {
+    const userId = (req as any).user.id;
+
+    try {
+        const transactions = await Customer_transaction.find({
+            where: { customer_account: { id: userId } },
+            order: { transaction_date: "DESC" },
+        });
+
+        res.status(200).json({ transactions });
+    } catch (error) {
+        console.error('Error fetching customer transactions:', error);
+        res.status(500).json({ message: error.message });
+    }
+}

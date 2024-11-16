@@ -7,6 +7,7 @@ import { Item, ItemType } from "../entities/item.entity";
 import { In, IsNull } from "typeorm";
 import { statusEnum } from "../entities/businessRegisterBusiness.entity";
 import { Customer_voucher } from "../entities/customerVouchers.entity";
+import { Customer_transaction } from "../entities/customerTransaction.entity";
 
 export const updateVoucherStatus = async (req, res) => {
     const { voucherId, status } = req.body; // Get voucherId and status from request body
@@ -152,6 +153,13 @@ export const purchaseVoucher = async (req: Request, res: Response): Promise<void
             businessAccount.gem_balance += totalCost;
             await businessAccount.save();
         }
+
+        // Log the transaction
+        const customerTransaction = Customer_transaction.create({
+            gems_deducted: totalCost,
+            customer_account: customer,
+        });
+        await customerTransaction.save();
 
         // Fetch or create the customer's inventory
         let inventory = await Customer_inventory.findOne({

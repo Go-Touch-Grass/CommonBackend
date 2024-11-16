@@ -6,13 +6,22 @@ import { UserRole } from '../entities/abstract/abstractUser.entity';
 import { Business_account } from '../entities/businessAccount.entity';
 import { Customer_inventory } from '../entities/customerInventory.entity';
 import { Customer_voucher } from '../entities/customerVouchers.entity';
-
+import { Business_transaction, TransactionType } from '../entities/businessTransaction.entity';
+import { Customer_transaction } from '../entities/customerTransaction.entity';
 
 type PaymentIntentInfo = {
   customer_id: number;
   clientSecret: string | null;
   paymentIntentId: string;
 };
+
+const priceIds = {
+  bundle50Gems: process.env.STRIPE_PRICE_ID_50_GEMS,
+  bundle100Gems: process.env.STRIPE_PRICE_ID_100_GEMS,
+  bundle250Gems: process.env.STRIPE_PRICE_ID_250_GEMS,
+  bundle500Gems: process.env.STRIPE_PRICE_ID_500_GEMS,
+  bundle1000Gems: process.env.STRIPE_PRICE_ID_1000_GEMS,
+}
 
 export const finalizeGroupPurchase = async (req: Request, res: Response) => {
   const { group_purchase_id } = req.body;
@@ -111,6 +120,13 @@ export const finalizeGroupPurchase = async (req: Request, res: Response) => {
         // Deduct the required gems from the customer's gem balance
         customer.gem_balance -= finalPriceInGems;
         await customer.save();
+
+        // Log the transaction in the customer's transaction history
+        const customerTransaction = Customer_transaction.create({
+          gems_deducted: finalPriceInGems,
+          customer_account: customer,
+        });
+        await customerTransaction.save();
 
         // Increment the business's gem balance
         businessAccount.gem_balance += finalPriceInGems;
@@ -219,7 +235,7 @@ const getUserFromDB = async (userId: number, userRole: UserRole): Promise<Busine
 const createOrGetUserStripeId = async (userId: number, userRole: UserRole): Promise<string> => {
   const user = await getUserFromDB(userId, userRole);
 
-  if (!user.stripeId) {
+  if (!user.stripeCustomerId) {
     // Create a new Stripe customer
     const stripeCustomer = await stripe.customers.create({
       email: user.email,
@@ -228,10 +244,10 @@ const createOrGetUserStripeId = async (userId: number, userRole: UserRole): Prom
         ? `Business account for ${user.username}`
         : `Customer account for ${user.username}`,
     });
-    user.stripeId = stripeCustomer.id;
+    user.stripeCustomerId = stripeCustomer.id;
     await user.save();
   }
-  return user.stripeId;
+  return user.stripeCustomerId;
 }
 
 export const createPaymentIntent = async (req: Request, res: Response): Promise<void> => {
@@ -260,6 +276,48 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
     res.status(500).json({ error: error.message });
   }
 };
+
+export const createStripeSubscription = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { productName } = req.body;
+    const priceId = priceIds[productName];
+
+    const userId = (req as any).user.id;
+    const userRole = (req as any).user.role;
+    const userStripeId = await createOrGetUserStripeId(userId, userRole);
+
+    // Create a new subscription
+    const subscription = await stripe.subscriptions.create({
+      customer: userStripeId,
+      items: [{
+        price: priceId,
+      }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['latest_invoice.payment_intent'],
+    });
+
+    // Check if latest_invoice is valid and payment_intent is a PaymentIntent object
+    const latestInvoice = subscription.latest_invoice;
+    if (latestInvoice && typeof latestInvoice !== 'string' && latestInvoice.payment_intent) {
+      const paymentIntent = latestInvoice.payment_intent;
+
+      // Check if payment_intent is an object and contains client_secret
+      if (typeof paymentIntent !== 'string' && paymentIntent.client_secret) {
+        res.status(200).json({
+          clientSecret: paymentIntent.client_secret,
+          subscriptionId: subscription.id,
+        });
+      } else {
+        res.status(500).json({ error: 'No valid client secret found in payment intent.' });
+      }
+    } else {
+      res.status(500).json({ error: 'No valid payment intent found for the subscription.' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 export const getUserEmailandUsername = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -328,13 +386,13 @@ export const getPaymentMethod = async (req: Request, res: Response): Promise<voi
     const userRole = (req as any).user.role;
     const user = await getUserFromDB(userId, userRole);
 
-    if (!user.stripeId || !user.paymentMethodId) {
+    if (!user.stripeCustomerId || !user.paymentMethodId) {
       // No saved payment method found, respond with an empty object
       res.status(200).json({ message: 'No saved payment method found.' });
       return;
     }
 
-    const userStripeId = user.stripeId;
+    const userStripeId = user.stripeCustomerId;
     const paymentMethodId = user.paymentMethodId;
 
     const paymentMethod = await stripe.customers.retrievePaymentMethod(userStripeId, paymentMethodId!);
@@ -368,3 +426,96 @@ export const getUserStripeIdAndEphemeralKey = async (req: Request, res: Response
     res.status(500).json({ error: error.message });
   }
 }
+
+export const getBusinessStripeAccountStatus = async (req: Request, res: Response): Promise<void> => {
+  const businessId = (req as any).user.id;
+  const business = await Business_account.findOne({ where: { business_id: businessId } });
+
+  if (!business) {
+    res.status(404).json({ message: 'Business account not found' });
+    return;
+  }
+
+  res.json({
+    stripeAccountId: business.stripeAccountId,
+    gemBalance: business.gem_balance,
+  });
+};
+
+export const createBusinessOnboardingLink = async (req: Request, res: Response): Promise<void> => {
+  const businessId = (req as any).user.id;
+  const business = await Business_account.findOne({ where: { business_id: businessId } });
+
+  if (!business) {
+    res.status(404).json({ message: 'Business account not found' });
+    return;
+  }
+
+  if (!business.stripeAccountId) {
+    const account = await stripe.accounts.create({
+      country: 'SG',
+      email: business.email,
+      controller: {
+        fees: {
+          payer: 'application',
+        },
+        losses: {
+          payments: 'application',
+        },
+        stripe_dashboard: {
+          type: 'express',
+        },
+      },
+    });
+    business.stripeAccountId = account.id;
+    await business.save();
+  }
+
+  const accountLink = await stripe.accountLinks.create({
+    account: business.stripeAccountId,
+    refresh_url: 'http://localhost:3000/cashout',
+    return_url: 'http://localhost:3000/cashout',
+    type: 'account_onboarding',
+  });
+
+  res.json({ onboardingUrl: accountLink.url });
+}
+
+export const cashout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const businessId = (req as any).user.id;
+    const {
+      currency_amount: currencyAmount, // In SGD
+      gem_amount: gemAmount,
+    } = req.body;
+
+    const business = await Business_account.findOne({ where: { business_id: businessId } });
+    if (!business || business.gem_balance < gemAmount) {
+      res.status(400).json({ error: 'Insufficient gems' });
+      return;
+    }
+
+    const transfer = await stripe.transfers.create({
+      amount: currencyAmount * 100, // Convert to cents
+      currency: 'sgd',
+      destination: business.stripeAccountId,
+    });
+
+    // Update gem balance and save transaction record
+    business.gem_balance -= gemAmount;
+    await business.save();
+
+    // Create a new transaction record
+    const businessTransaction = Business_transaction.create({
+      currency_amount: currencyAmount,
+      gems_deducted: gemAmount,
+      transaction_type: TransactionType.GEM_CASHOUT,
+      business_account: business,
+    });
+    businessTransaction.save();
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

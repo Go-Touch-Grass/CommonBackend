@@ -4,7 +4,7 @@ import { Business_account } from "./businessAccount.entity";
 import { Item } from "./item.entity";
 import { Outlet } from "./outlet.entity";
 import { Business_register_business } from "./businessRegisterBusiness.entity";
-
+import { AvatarPrompt } from "./avatarPrompt.entity";
 export enum AvatarType {
     BUSINESS_REGISTER_BUSINESS = 'business_register_business',
     OUTLET = 'outlet',
@@ -63,4 +63,14 @@ export class Avatar extends BaseEntity {
     @ManyToOne(() => Item, { nullable: true })
     @JoinColumn({ name: "bottom_id" })
     bottom: Item | null;
+
+    @Column({ default: 0 })
+    engagement_count: number;
+
+    @OneToOne(() => AvatarPrompt, prompt => prompt.avatar, {
+        nullable: true,
+        cascade: true
+    })
+    @JoinColumn({ name: "prompt_id" })
+    prompt: AvatarPrompt;
 }
