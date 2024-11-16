@@ -1495,3 +1495,19 @@ export const customerCashback = async (req: Request, res: Response): Promise<voi
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+export const getCustomerTransactions = async (req: Request, res: Response): Promise<void> => {
+    const userId = (req as any).user.id;
+
+    try {
+        const transactions = await Customer_transaction.find({
+            where: { customer_account: { id: userId } },
+            order: { transaction_date: "DESC" },
+        });
+
+        res.status(200).json({ transactions });
+    } catch (error) {
+        console.error('Error fetching customer transactions:', error);
+        res.status(500).json({ message: error.message });
+    }
+}
