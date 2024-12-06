@@ -695,11 +695,20 @@ export const checkExpiringSubscription = async (): Promise<void> => {
       const business = subscription.business_register_business.business_account;
       //console.log("business:", business);
       //console.log("expiring subscription:", subscription.title);
+      // used floor round down. IF 2.5 days still counted as 2 days
+      let daysLeft = Math.floor(
+        (subscription.expiration_date.getTime() - today.getTime()) /
+        (1000 * 60 * 60 * 24)
+      ); // Calculate the number of days left
+
+      if (daysLeft < 0) {
+        daysLeft = 0;
+      }
 
       if (business && business.email) {
         // Send renewal email
         //console.log(`Sending renewal email to ${business.email}`);
-        await sendSubscriptionRenewEmail(business.email);
+        await sendSubscriptionRenewEmail(business.email, daysLeft);
         console.log(`Sent renewal email to ${business.email}`);
       }
     }

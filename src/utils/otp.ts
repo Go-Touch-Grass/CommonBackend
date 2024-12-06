@@ -29,7 +29,7 @@ export async function sendOTPEmail(email: string, otp: string): Promise<void> {
 }
 
 // Send OTP via email
-export async function sendSubscriptionRenewEmail(email: string): Promise<void> {
+export async function sendSubscriptionRenewEmail(email: string, daysLeft: number): Promise<void> {
     console.log("Email user: ", process.env.EMAIL_USER);
     const transporter = nodemailer.createTransport({
         service: 'Gmail', // Example using Gmail, you can configure this for your provider
@@ -40,11 +40,24 @@ export async function sendSubscriptionRenewEmail(email: string): Promise<void> {
 
     });
 
+    //const subscriptionLink = `${process.env.BASE_URL}/viewSubscriptionPage`;
+    const subscriptionLink = `${process.env.BASE_URL}/viewSubscriptionPage`;
+
+    // email content based on daysLeft
+    const emailContent = daysLeft === 0
+        ? `<p>Your subscription expires <strong>today</strong>.</p>`
+        : `<p>Your subscription is about to expire in <strong>${daysLeft} days</strong>.</p>`;
+
+
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
         subject: 'GoTouchGrass - Subscription about to expire ',
-        text: `Your subscription is about to expire. Please renew your subscription to continue using our services.`,
+        html: `
+         ${emailContent}
+        <p>Please renew your subscription to continue using our services.</p>
+        <p><a href="${subscriptionLink}" style="color: #1a73e8; text-decoration: none;">Click here to view your subscription</a></p>
+    `,
     };
     await transporter.sendMail(mailOptions);
 }
